@@ -1,0 +1,101 @@
+CONTEXT:
+DocGen CLI is a developer tool that automatically generates comprehensive documentation for any programming language using AI. The tool is distributed via pip and focuses on developer experience.
+
+KEY OBJECTIVES:
+1. Showcase AI-powered documentation capabilities
+2. Drive tool installations
+3. Build developer trust
+4. Demonstrate ease of use
+
+CORE FEATURES TO HIGHLIGHT:
+- 🤖 AI-powered documentation generation
+- 🌐 Language-agnostic code analysis
+- 📝 Markdown and docstring generation
+- 🔄 Git integration
+- ⚡ Async batch processing
+- 💾 Smart caching
+- 🔑 API key management
+- 📊 Usage tracking
+
+PAGE STRUCTURE:
+
+1. HERO SECTION
+- H1: "AI-Powered Documentation Generator"
+- Subtext: "Generate comprehensive docs for any programming language in seconds"
+- Terminal animation showing: `docgen generate --current-dir`
+- Primary CTA: "Get Started"
+- GitHub metrics
+
+2. FEATURES GRID
+- 3x3 grid layout
+- Icon + feature name + brief description
+- Hover animations
+- Code preview on interaction
+
+3. INSTALLATION. bash
+pip install docgen-cli
+docgen auth login --key YOUR_API_KEY
+docgen generate -f path/to/file.py.    
+4. DEMO SECTION
+- Interactive terminal
+- Before/After documentation examples
+- Language switching demo
+
+5. SOCIAL PROOF
+- GitHub stars
+- Developer testimonials
+- Usage statistics
+
+VISUAL STYLE:
+- Theme: Dark mode
+- Colors: 
+  - Background: #0D1117
+  - Primary: #00FF9D
+  - Accent: #FF3366
+- Typography:
+  - Headers: JetBrains Mono
+  - Body: Inter
+  - Code: Fira Code
+
+INTERACTIVE ELEMENTS:
+- Floating terminal window
+- Code syntax highlighting
+- Type animations
+- Smooth transitions
+- Hover states
+
+CONVERSION ELEMENTS:
+- GitHub star button
+- Newsletter signup
+- Documentation links
+- Discord community invite
+
+MOBILE CONSIDERATIONS:
+- Responsive terminal demos
+- Stacked feature grid
+- Simplified animations
+- Touch-friendly CTAs
+
+TECHNICAL REQUIREMENTS:
+- Next.js/React
+- Fast loading
+- SEO optimized
+- Analytics ready
+
+TONE & VOICE:
+- Technical but approachable
+- Focus on efficiency
+- Clear documentation
+- Developer-first language
+
+INSPIRATION:
+- Vercel
+- Stripe Docs
+- GitHub Copilot
+- Railway
+
+KEY DIFFERENTIATORS:
+- AI-powered analysis
+- Multi-language support
+- Git integration
+- Modern CLI experience

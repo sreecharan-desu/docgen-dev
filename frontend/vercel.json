@@ -1,0 +1,19 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://www.docgen.dev" },
+        { "key": "Access-Control-Allow-Methods", "value": "*" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, X-Machine-Id, X-Api-Key, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Allow-Origin" }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+} 
