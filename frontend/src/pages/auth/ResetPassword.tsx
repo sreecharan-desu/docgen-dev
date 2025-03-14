@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { API_URL } from "@/config"
+import { API_URL } from "@/utils/config"
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("")

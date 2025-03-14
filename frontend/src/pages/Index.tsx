@@ -162,15 +162,6 @@ const Index = () => {
               >
                 {user ? 'Go to Dashboard' : 'Start Documenting'} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="gap-2 border-gray-700 hover:border-primary transition-all duration-300 transform hover:scale-105"
-              >
-                <Github className="w-5 h-5" />
-                <Star className="w-4 h-4 text-yellow-400" />
-                Star on GitHub
-              </Button>
             </motion.div>
             <motion.div 
               className="max-w-2xl mx-auto"

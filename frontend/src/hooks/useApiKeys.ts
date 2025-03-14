@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_URL } from '@/config';
+import { API_URL } from '@/utils/config';
 import { useToast } from "@/components/ui/use-toast";
 
 export function useApiKeys() {

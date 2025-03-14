@@ -12,12 +12,12 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isGithubLoading, setIsGithubLoading] = useState(false)
+
   const { login, loginWithGoogle, loginWithGitHub } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
     try {
       await login(email, password)
       navigate('/dashboard')
@@ -40,6 +40,7 @@ export default function Login() {
       setIsGithubLoading(false)
     }
   }
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -58,7 +59,9 @@ export default function Login() {
           <FcGoogle className="w-5 h-5" />
           Continue with Google
         </Button>
-
+        <div className="text-center">
+          Or
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -74,18 +77,7 @@ export default function Login() {
           {isGithubLoading ? "Connecting..." : "Continue with GitHub"}
         </Button>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-600/50" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-card px-4 text-gray-500 uppercase tracking-wider">
-              Email login temporarily disabled
-            </span>
-          </div>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-4 opacity-50">
+        {/* <form onSubmit={handleLogin} className="space-y-4 opacity-50">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -95,7 +87,6 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              disabled
             />
           </div>
 
@@ -107,7 +98,6 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              disabled
             />
           </div>
 
@@ -121,7 +111,7 @@ export default function Login() {
             </Link>
           </div>
 
-          <Button type="submit" className="w-full" disabled>
+          <Button type="submit" className="w-full" onClick={handleLogin}>
             Sign in
           </Button>
         </form>
@@ -131,7 +121,7 @@ export default function Login() {
           <Link to="/auth/register" className="text-primary hover:underline pointer-events-none" onClick={(e) => e.preventDefault()}>
             Register
           </Link>
-        </p>
+        </p> */}
       </div>
     </div>
   )

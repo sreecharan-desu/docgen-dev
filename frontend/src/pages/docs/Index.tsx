@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
-import { 
-  Terminal, 
-  FileCode,  
-  Info, 
+import {
+  Terminal,
+  FileCode,
+  Info,
   Key,
   Command,
   Menu,
@@ -57,7 +57,7 @@ const DocsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pt-[64px] sm:pt-[72px]">
+    <div className="min-h-screen bg-[#0A0A0A] pt-[64px] sm:pt-[72px] m-0">
       {/* Mobile Menu Button */}
       <button
         onClick={toggleMobileMenu}
@@ -84,7 +84,7 @@ const DocsPage = () => {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
-                    activeSection === item.href.replace("#", "") 
+                    activeSection === item.href.replace("#", "")
                       ? "bg-emerald-500/10 text-emerald-500"
                       : "text-gray-400 hover:text-white hover:bg-[#1F1F1F]"
                   )}
@@ -122,7 +122,7 @@ const DocsPage = () => {
 
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 top-[64px] sm:top-[72px] bg-black bg-opacity-50 z-30 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -155,8 +155,8 @@ const DocsPage = () => {
               Install DocGen using pip package manager:
             </p>
             <div className="bg-[#111111] rounded-lg p-3 sm:p-4 mb-4 group relative overflow-x-auto">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="absolute right-2 sm:right-3 top-2 sm:top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
               >
@@ -178,7 +178,7 @@ const DocsPage = () => {
               </div>
               <h2 className="text-xl sm:text-2xl font-semibold">Authentication</h2>
             </div>
-            
+
             {/* Anonymous Usage */}
             <div className="mb-6 sm:mb-8">
               <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Anonymous Usage</h3>
@@ -216,8 +216,8 @@ const DocsPage = () => {
                   Get your API key from the dashboard and authenticate:
                 </div>
                 <div className="bg-[#1F1F1F] rounded-lg p-3 sm:p-4 group relative overflow-x-auto">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="absolute right-2 sm:right-3 top-2 sm:top-3 opacity-0 group-hover:opacity-100 transition bg-[#2A2A2A] hover:bg-[#333333] text-gray-400"
                   >
@@ -226,7 +226,7 @@ const DocsPage = () => {
                   <pre className="text-gray-300 font-mono text-sm sm:text-base overflow-x-auto"><code>$ docgen auth login --key=YOUR_API_KEY</code></pre>
                 </div>
               </div>
-              
+
               {/* Usage Tracking */}
               <div className="flex items-start gap-2 p-3 sm:p-4 rounded-lg bg-[#111111] border border-[#1F1F1F]">
                 <Info className="h-5 w-5 text-gray-400 mt-0.5" />
@@ -252,13 +252,13 @@ const DocsPage = () => {
             <div id="generate" className="mb-16">
               <h3 className="text-xl font-semibold mb-4">Generate (g)</h3>
               <p className="text-gray-400 mb-4">
-                Generates documentation for a file or directory. You can use either <code className="text-emerald-500">docgen generate</code> or 
+                Generates documentation for a file or directory. You can use either <code className="text-emerald-500">docgen generate</code> or
                 the shorter alias <code className="text-emerald-500">docgen g</code> to generate codebase documentation.
               </p>
               <div className="space-y-6">
                 <div className="bg-[#111111] rounded-lg p-4 group relative">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                   >
@@ -312,8 +312,8 @@ $ docgen g [OPTIONS]`}</code></pre>
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium text-gray-200">Examples</h4>
                   <div className="bg-[#111111] rounded-lg p-4 group relative">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                     >
@@ -333,13 +333,13 @@ $ docgen g -cd -o ./output_docs`}</code></pre>
             <div id="update" className="mb-16">
               <h3 className="text-xl font-semibold mb-4">Update (u)</h3>
               <p className="text-gray-400 mb-4">
-                Updates documentation for changed files since the last documentation generation. You can use either <code className="text-emerald-500">docgen update</code> or 
+                Updates documentation for changed files since the last documentation generation. You can use either <code className="text-emerald-500">docgen update</code> or
                 the shorter alias <code className="text-emerald-500">docgen u</code> to update documentation for changed files. This command is Git-aware.
               </p>
               <div className="space-y-6">
                 <div className="bg-[#111111] rounded-lg p-4 group relative">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                   >
@@ -384,8 +384,8 @@ $ docgen u [OPTIONS]`}</code></pre>
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium text-gray-200">Examples</h4>
                   <div className="bg-[#111111] rounded-lg p-4 group relative">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                     >
@@ -409,15 +409,15 @@ $ docgen u -u updates.md`}</code></pre>
               </p>
               <div className="space-y-6">
                 <div className="bg-[#111111] rounded-lg p-4 group relative">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                   >
                     Copy
                   </Button>
                   <pre className="text-gray-300 font-mono"><code>$ docgen clean [OPTIONS]
-$ docgen c [OPTIONS]  # Alias</code></pre>
+                    $ docgen c [OPTIONS]  # Alias</code></pre>
                 </div>
 
                 <div className="space-y-4">
@@ -434,15 +434,15 @@ $ docgen c [OPTIONS]  # Alias</code></pre>
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium text-gray-200">Examples</h4>
                   <div className="bg-[#111111] rounded-lg p-4 group relative">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                     >
                       Copy
                     </Button>
                     <pre className="text-gray-300 font-mono"><code>$ docgen clean
-$ docgen c --current-dir</code></pre>
+                      $ docgen c --current-dir</code></pre>
                   </div>
                 </div>
               </div>
@@ -456,8 +456,8 @@ $ docgen c --current-dir</code></pre>
               </p>
               <div className="space-y-6">
                 <div className="bg-[#111111] rounded-lg p-4 group relative">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                   >
@@ -465,7 +465,7 @@ $ docgen c --current-dir</code></pre>
                   </Button>
                   <pre className="text-gray-300 font-mono"><code>$ docgen usage</code></pre>
                 </div>
-                
+
                 <div className="bg-[#111111] rounded-lg p-4">
                   <div className="flex items-center gap-2 text-gray-300 mb-2">
                     <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
@@ -513,8 +513,8 @@ $ docgen c --current-dir</code></pre>
                   <h3 className="text-xl font-semibold mb-4">{cmd.title}</h3>
                   <p className="text-gray-400 mb-4">{cmd.description}</p>
                   <div className="bg-[#111111] rounded-lg p-4 group relative">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition bg-[#1F1F1F] hover:bg-[#2A2A2A] text-gray-400"
                     >

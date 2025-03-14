@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { API_URL } from "@/config"
+import { API_URL } from "@/utils/config"
 import { Link } from "react-router-dom"
 
 export default function ForgotPassword() {

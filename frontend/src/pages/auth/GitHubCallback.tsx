@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/components/ui/use-toast"
-import { API_URL } from "@/config"
+import { API_URL } from "@/utils/config"
 
 export default function GitHubCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')

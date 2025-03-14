@@ -1,19 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Menu, Search, Home, ChevronRight } from "lucide-react";
+import { Bell, Menu, Home, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import Sidebar from "@/components/dashboard/Sidebar";
-import ApiKeysSection from "@/components/dashboard/ApiKeysSection";
 import BillingSection from "@/components/dashboard/BillingSection";
-import ProjectsSection from "@/components/dashboard/ProjectsSection";
 import SettingsSection from "@/components/dashboard/SettingsSection";
 import { DashboardSection } from "@/types";
+import ProjectsSection from "@/components/dashboard/ProjectsSection";
 
 const Dashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState<DashboardSection>('api-keys');
+  const [activeSection, setActiveSection] = useState<DashboardSection>('projects');
   const { user, logout } = useAuth();
 
   // Get user initials for avatar fallback
@@ -30,8 +29,6 @@ const Dashboard = () => {
   // Render the appropriate content based on active section
   const renderContent = () => {
     switch (activeSection) {
-      case 'api-keys':
-        return <ApiKeysSection user={user} />;
       case 'billing':
         return <BillingSection />;
       case 'projects':
@@ -39,7 +36,7 @@ const Dashboard = () => {
       case 'settings':
         return <SettingsSection user={user} />;
       default:
-        return <ApiKeysSection user={user} />;
+        return <ProjectsSection />;
     }
   };
 
@@ -50,8 +47,10 @@ const Dashboard = () => {
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
         activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        user={user}
+        setActiveSection={(section: DashboardSection) => {
+          setActiveSection(section)
+        }}
+        user={user ? { ...user, avatarUrl: user.avatarUrl || '' } : null}
         logout={logout}
       />
       

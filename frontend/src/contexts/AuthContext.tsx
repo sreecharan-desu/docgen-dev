@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { API_URL, GITHUB_CALLBACK_URL } from '@/config'
-import { hashPassword } from '@/utils/crypto'
+import { API_URL, GITHUB_CALLBACK_URL } from '@/utils/config'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/components/ui/use-toast'
 
@@ -8,6 +7,7 @@ interface User {
   id: string
   email: string
   name?: string
+  avatarUrl?: string
 }
 
 interface AuthResponse {
