@@ -27,37 +27,19 @@ const Dashboard = () => {
       .substring(0, 2);
   };
 
-  // // Render the appropriate content based on active section
-  // const renderContent = () => {
-  //   switch (activeSection) {
-  //     case 'api-keys':
-  //       return <ApiKeysSection user={user} />;
-  //     case 'billing':
-  //       return <BillingSection />;
-  //     case 'projects':
-  //       return <ProjectsSection />;
-  //     case 'settings':
-  //       return <SettingsSection user={user} />;
-  //     default:
-  //       return <ApiKeysSection user={user} />;
-  //   }
-  // };
-
-
-
-   // Render the appropriate content based on active section
-   const renderContent = () => {
+  // Render the appropriate content based on active section
+  const renderContent = () => {
     switch (activeSection) {
       case 'api-keys':
-        return <div>APi key section will be rendered here</div>;
+        return <ApiKeysSection user={user} />;
       case 'billing':
-        return <div>Billing section will be rendered here</div>;
+        return <BillingSection />;
       case 'projects':
-        return <div>Projects section</div>;
+        return <ProjectsSection />;
       case 'settings':
-        return <div>Settings</div>;
+        return <SettingsSection user={user} />;
       default:
-        return <div>Api key section will be rendered here</div>;
+        return <ApiKeysSection user={user} />;
     }
   };
 
