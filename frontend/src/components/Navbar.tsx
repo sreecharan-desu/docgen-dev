@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LogOut, LayoutDashboard, Github } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, Github, ChevronRight, ArrowRight, Star } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -139,19 +139,51 @@ export const Navbar = () => {
             </motion.div>
           ) : (
             <div className="flex items-center gap-3">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div
+                whileHover={{
+                  scale: 1.05,
+                  transition: { type: "spring", stiffness: 400, damping: 10 }
+                }}
+                whileTap={{
+                  scale: 0.95,
+                  transition: { type: "spring", stiffness: 500, damping: 10 }
+                }}
+                className="relative"
+              >
                 <Link to="/auth/login">
-                  <Button variant="outline" size="sm" className="w-full border-gray-700 hover:bg-transaprent hover:border-primary hover:text-primary">
-                    Sign In
+                  <Button className="relative group overflow-hidden bg-gradient-to-r from-green-700 via-green-600 to-green-800 hover:from-green-600 hover:via-green-500 hover:to-green-700 text-white transition-all duration-500 shadow-lg shadow-primary/30 px-6 py-3 font-medium">
+                    {/* Background pulse effect */}
+                    <span className="absolute inset-0 bg-gradient-to-tr from-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-sm"></span>
+
+                    {/* Shine effect */}
+                    <span className="absolute inset-0 translate-x-full group-hover:translate-x-[-180%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 skew-x-12"></span>
+
+                    {/* Border glow effect */}
+                    <span className="absolute inset-0 rounded-md border border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-[1.03] group-hover:scale-105"></span>
+
+                    {/* Star icon and text */}
+                    <span className="flex items-center space-x-2 relative z-10">
+                      <span className="relative">
+                        Join us
+                      </span>
+                    </span>
                   </Button>
                 </Link>
+
+                {/* Outer glow effect */}
+                <motion.div
+                  className="absolute inset-0 -z-10 rounded-md bg-primary/20 blur-md"
+                  initial={{ opacity: 0 }}
+                  whileHover={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                />
               </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link to="/auth/register">
+                {/* <Link to="/auth/register">
                   <Button className="bg-primary text-white hover:bg-primary/80 transition duration-300 shadow-md shadow-primary/20">
                     Register
                   </Button>
-                </Link>
+                </Link> */}
               </motion.div>
             </div>
           )}
@@ -233,14 +265,14 @@ export const Navbar = () => {
                   <div className="grid grid-cols-2 gap-3 mt-4">
                     <Link to="/auth/login">
                       <Button variant="outline" size="sm" className="w-full border-gray-700 hover:bg-primary/80 hover:border-primary hover:text-primary">
-                        Sign In
+                        Join us
                       </Button>
                     </Link>
-                    <Link to="/auth/register">
+                    {/* <Link to="/auth/register">
                       <Button size="sm" className="w-full bg-primary hover:bg-primary/80 text-white shadow-md shadow-primary/20">
                         Register
                       </Button>
-                    </Link>
+                    </Link> */}
                   </div>
                 </motion.div>
               ) : (

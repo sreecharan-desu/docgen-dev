@@ -13,10 +13,10 @@ const BillingSection = () => {
   // Plans data with psychological triggers embedded
   const plans = [
     {
-      id: "basic",
-      name: "Basic",
+      id: "Free",
+      name: "Free",
       description: "Perfect for solo creators",
-      price: "$9",
+      price: "$0",
       period: "monthly",
       savings: "",
       accent: "from-blue-400 to-blue-600",
@@ -24,7 +24,7 @@ const BillingSection = () => {
       features: [
         "5 API keys",
         "10,000 requests/month",
-        "Basic support",
+        "Free support",
         "7-day log retention"
       ],
       buttonText: "Get Started",
@@ -90,7 +90,7 @@ const BillingSection = () => {
     },
     {
       question: "Is there a setup fee?",
-      answer: "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and basic support."
+      answer: "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and Free support."
     }
   ];
 
@@ -225,7 +225,7 @@ const BillingSection = () => {
 
         {/* Main title with animated gradient */}
         <motion.h1
-          className="text-4xl sm:text-5xl font-bold mb-6 relative"
+          className="text-4xl sm:text-5xl font-bold mb-6 relative w-full"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.7 }}
@@ -486,7 +486,7 @@ const EnhancedFAQs = () => {
     },
     {
       question: "Is there a setup fee?",
-      answer: "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and basic support."
+      answer: "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and Free support."
     }
   ];
 

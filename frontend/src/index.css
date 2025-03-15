@@ -1,44 +1,88 @@
+/* Custom font imports */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html{
+/* Global Styles */
+html {
   scroll-behavior: smooth;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
+/* Improved hidden scrollbar for WebKit browsers */
 ::-webkit-scrollbar {
-
-  color: transparent;
+  width: 0;
+  height: 0;
   display: none;
+  background: transparent;
 }
 
-
-*{
+* {
   border-color: transparent;
 }
 
+
+
+/* Enhanced Theme Colors */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    /* Core colors */
+    --background: 222 47% 11%;
+    --foreground: 213 31% 91%;
+    
+    /* Updated primary color with better contrast */
     --primary: 142 71% 45%;
-    --primary-foreground: 355 100% 97%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    --primary-foreground: 210 40% 98%;
+    
+    /* Enhanced secondary colors */
+    --secondary: 222 47% 21%;
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Card & UI element colors */
+    --card: 222 47% 13%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 213 31% 91%;
+    
+    /* Utility colors */
+    --muted: 223 47% 18%;
+    --muted-foreground: 215 16% 70%;
+    --accent: 222 47% 21%;
+    --accent-foreground: 210 40% 98%;
+    
+    /* Semantic colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+    --info: 214 100% 60%;
+    --info-foreground: 210 40% 98%;
+    
+    /* Border & input colors */
+    --border: 213 27% 20%;
+    --input: 213 27% 20%;
     --ring: 142 71% 45%;
+    
+    /* Adjustable radius */
     --radius: 0.75rem;
+    
+    /* Header height for offset calculations */
+    --header-height: 4rem;
+  }
+
+  /* Dark mode tweaks */
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 71% 6%;
+    --border: 216 34% 17%;
+    --muted: 223 47% 14%;
   }
 }
 
@@ -46,61 +90,94 @@ html{
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background text-white antialiased;
+    @apply bg-background text-foreground antialiased font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium tracking-tight;
   }
 }
 
-.glass-card {
-  @apply bg-card backdrop-blur-lg border border-white/10 shadow-lg;
+/* Enhanced Component Styles */
+@layer components {
+  /* Improved glass card with subtle gradient */
+  .glass-card {
+    @apply bg-black/20 backdrop-blur-lg border border-white/10 shadow-lg relative overflow-hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+  
+  .glass-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none opacity-70;
+  }
+  
+  /* Improved terminal styling */
+  .terminal {
+    @apply font-mono bg-[#1A1A1A] rounded-lg p-4 text-white relative overflow-hidden border border-white/5;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+  
+  .terminal::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-6 bg-[#2A2A2A] flex items-center px-4;
+  }
+  
+  .terminal::after {
+    content: '';
+    @apply absolute top-1.5 left-4 w-2 h-2 rounded-full bg-red-500;
+    box-shadow: 16px 0 0 0 #FFBD2E, 32px 0 0 0 #28C941;
+  }
+  
+  /* Code block styling */
+  .code-block {
+    @apply font-mono rounded-lg p-4 text-white overflow-auto;
+    background-color: #1E1E1E;
+  }
+  
+  /* Layout containers */
+  .content-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .section {
+    @apply py-12 sm:py-16 md:py-20;
+  }
+  
+  /* Card variations */
+  .feature-card {
+    @apply glass-card p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg;
+  }
+  
+  .feature-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Button variations */
+  .btn-glow {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+  
+  .btn-glow::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-primary/50 to-transparent opacity-0 transition-opacity duration-300;
+  }
+  
+  .btn-glow:hover::before {
+    @apply opacity-100;
+  }
 }
 
-.terminal {
-  @apply font-mono bg-[#1E1E1E] rounded-lg p-4 text-white;
-}
-
-.typing-demo {
-  width: 22ch;
-  animation: typing 2s steps(22), blink .5s step-end infinite alternate;
-  white-space: nowrap;
-  overflow: hidden;
-  border-right: 3px solid;
-}
-
+/* Enhanced Animations */
 @keyframes typing {
-  from {
-    width: 0;
-  }
+  from { width: 0 }
+  to { width: 100% }
 }
-    
+
 @keyframes blink {
-  50% {
-    border-color: transparent;
-  }
-}
-
-pre code {
-  font-family: 'Fira Code', monospace;
-  line-height: 1.5;
-}
-
-.glass-card pre {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-}
-
-.glass-card pre::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.glass-card pre::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.glass-card pre::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  50% { border-color: transparent }
 }
 
 @keyframes text {
@@ -113,6 +190,139 @@ pre code {
     background-position: right center;
   }
 }
-.animate-text {
-  animation: text 8s ease infinite;
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@layer utilities {
+  /* Improved typing animation */
+  .typing-demo {
+    @apply font-mono overflow-hidden whitespace-nowrap inline-block;
+    border-right: 3px solid;
+    animation: typing 2.5s steps(40, end), blink 0.7s step-end infinite alternate;
+  }
+  
+  /* Text gradient animation */
+  .animate-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+    animation: text 8s ease infinite;
+  }
+  
+  .animate-text-fast {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+    animation: text 4s ease infinite;
+  }
+  
+  /* Shimmer effect */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  /* Custom gradient text */
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400;
+  }
+  
+  .text-gradient-cool {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400;
+  }
+  
+  /* Improved scrollbar for code blocks */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+  }
+  
+  /* Backdrop blurs */
+  .backdrop-blur-xs {
+    backdrop-filter: blur(2px);
+  }
+  
+  .backdrop-blur-2xl {
+    backdrop-filter: blur(40px);
+  }
+  
+  /* Improved focus styles */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  
+  /* Hide scrollbar but maintain functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+  
+  /* Improved gradient backgrounds */
+  .bg-gradient-subtle {
+    @apply bg-gradient-to-br from-background to-secondary/50;
+  }
+  
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-primary/20 via-primary/10 to-transparent;
+  }
+}
+
+/* Code syntax highlighting */
+pre code {
+  font-family: 'Fira Code', monospace;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .glass-card {
+    @apply rounded-lg p-4;
+  }
+  
+  .typing-demo {
+    width: 16ch;
+  }
+}
+
+/* Print styles */
+@media print {
+  .glass-card, .terminal, .code-block {
+    @apply shadow-none border border-gray-300 bg-white text-black;
+  }
+  
+  .no-print {
+    display: none;
+  }
 }

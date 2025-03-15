@@ -8,24 +8,27 @@ import { AppRoutes } from "./AppRoutes";
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Analytics } from "@vercel/analytics/react"
 import useIsAuth from "./hooks/isAuth";
+import { RecoilRoot } from "recoil";
 
 const queryClient = new QueryClient();
 
 
 const App = () => (
-  <BrowserRouter>
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <SpeedInsights />
-          <AppRoutes />
-          <Analytics />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
-  </BrowserRouter>
+  <RecoilRoot>
+    <BrowserRouter>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <SpeedInsights />
+            <AppRoutes />
+            <Analytics />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </RecoilRoot>
 );
 
 export default App;

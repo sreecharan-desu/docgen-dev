@@ -41,7 +41,7 @@ const Sidebar = ({
   // Navigation items
   const navItems = [
     { id: 'projects', label: 'Projects', icon: FolderKanban },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'Pricing', label: 'Pricing', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
