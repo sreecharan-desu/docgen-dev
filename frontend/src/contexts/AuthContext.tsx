@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useEffect, useState } from 'react'
 import { API_URL, GITHUB_CALLBACK_URL } from '@/utils/config'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/components/ui/use-toast'
 
 interface User {
-  email_confirmed: any
+  email_confirmed: boolean
   created_at: any
   id: string
   email: string

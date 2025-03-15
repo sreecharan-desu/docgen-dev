@@ -13,7 +13,7 @@ export default function useIsAuth() {
     else if (!token) {
       navigate("/", { replace: true });
     }
-    else if (token && location.pathname === "/auth/login") {
+    else if (token && (location.pathname === "/auth/login" || location.pathname === "/auth/register" || location.pathname === "/")) {
       navigate("/dashboard", { replace: true });
     }else {
       navigate(location.pathname, { replace: true });
