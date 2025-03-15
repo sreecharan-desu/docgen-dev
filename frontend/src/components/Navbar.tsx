@@ -1,297 +1,268 @@
-import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/AuthContext"
-import { Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, Menu, X, ChevronDown, Github, LogOut } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import { motion, AnimatePresence } from "framer-motion"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X, LogOut, LayoutDashboard, Github } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 export const Navbar = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const { login, register, user, logout } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Handle scroll effect for navbar
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setScrolled(true)
-      } else {
-        setScrolled(false)
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Animation variants
+  const navbarVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut"
       }
     }
+  };
 
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false)
-    setUserMenuOpen(false)
-  }, [location.pathname])
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await login(email, password)
-    } catch (error) {
-      console.error('Error signing in:', error)
-    }
-  }
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      await register(email, password, name)
-    } catch (error) {
-      console.error('Error registering:', error)
-    }
-  }
-
-  const handleStartFree = () => {
-    navigate('/auth/login')
-  }
-
-  const navbarVariants = {
-    initial: { opacity: 0, y: -20 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.3 } }
-  }
-
-  const mobileMenuVariants = {
-    hidden: { opacity: 0, height: 0 },
-    visible: { opacity: 1, height: 'auto', transition: { duration: 0.3 } }
-  }
-
-  const userMenuVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: -5 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.2 } }
-  }
+  const menuItemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: i => ({
+      opacity: 1,
+      x: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.3
+      }
+    })
+  };
 
   return (
-    <motion.nav 
-      className={`fixed top-0 w-full z-50 border-b transition-all duration-300 ${
-        scrolled 
-          ? 'bg-background/95 backdrop-blur-md border-gray-800/80 shadow-lg' 
-          : 'bg-background/60 backdrop-blur-sm border-gray-800/30'
-      }`}
-      initial="initial"
-      animate="animate"
+    <motion.nav
+      className={`fixed top-0 w-full z-50 border-b border-opacity-40 transition-all duration-300 ${scrolled
+        ? "bg-background/80 backdrop-blur-lg shadow-lg border-gray-800/30"
+        : "bg-background/40 backdrop-blur-md"
+        }`}
       variants={navbarVariants}
+      initial="hidden"
+      animate="visible"
     >
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="flex items-center group">
-            <motion.img 
-              src="/docgen-logo.png" 
-              alt="DocGen Logo" 
-              className="h-10 w-10 sm:h-12 sm:w-12 object-contain mt-2 transition-transform duration-300 group-hover:scale-110" 
-              whileHover={{ rotate: [0, -10, 10, -5, 0], transition: { duration: 0.5 } }}
-            />
-            <span className="font-semibold text-base sm:text-lg text-white leading-none ml-2 group-hover:text-primary transition-colors duration-300">
-              DocGen
-            </span>
-          </Link>
-          
-          <div className="hidden md:flex gap-6 ml-6">
-            <Link 
-              to="/docs" 
-              className="text-base font-medium text-white hover:text-primary transition-colors duration-300 relative group"
-            >
-              Documentation
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300"></span>
-            </Link>
-          </div>
-        </div>
+      <div className="container flex h-16 items-center justify-between px-4 mx-auto">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2 group">
+          <motion.img
+            src="/docgen-logo.png"
+            alt="DocGen Logo"
+            className="h-10 w-10 transition-transform duration-300"
+            whileHover={{
+              scale: 1.15,
+              rotate: [0, -10, 10, -5, 0],
+              transition: { duration: 0.5 }
+            }}
+          />
+          <motion.span
+            className="font-semibold text-lg text-white group-hover:text-primary transition duration-300"
+            whileHover={{
+              scale: 1.05,
+              transition: { duration: 0.2 }
+            }}
+          >
+            DocGen
+          </motion.span>
+        </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-6">
+          <motion.div
+            whileHover={{
+              scale: 1.03,
+              transition: { type: "spring", stiffness: 400, damping: 10 }
+            }}
+          >
+            <Link
+              to="/docs"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium text-gray-200 hover:text-primary transition-colors duration-200 group"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                className="w-4 h-4 stroke-gray-300 group-hover:stroke-primary transition-colors duration-200"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+              </svg>
+              <span>Docs</span>
+            </Link>
+          </motion.div>
+
           {user ? (
-            <div className="flex items-center gap-4 relative">
-              <Link to="/dashboard">
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2 border-gray-700 hover:border-primary hover:bg-primary/10 transition-all duration-300"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
-                </Button>
-              </Link>
-              
+            <motion.div
+              className="relative flex items-center cursor-pointer gap-2 px-2 py-1 rounded-md bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 shadow-sm hover:border-primary/50 transition-all duration-300"
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 400 }}
+              onClick={() => navigate("/dashboard")}
+            >
+              {/* Avatar with verification indicator */}
               <div className="relative">
-                <Button 
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                >
-                  <div className={`h-8 w-8 rounded-full bg-green-500/30 flex items-center justify-center text-green-800`}>
-                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${userMenuOpen ? 'rotate-180' : ''}`} />
-                </Button>
-                
-                <AnimatePresence>
-                  {userMenuOpen && (
-                    <motion.div 
-                      className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-md shadow-lg overflow-hidden z-50"
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={userMenuVariants}
-                    >
-                      <div className={`p-4 border-b border-border/60 ${userMenuOpen ? 'flex justify-center' : ''} bg-green-50 dark:bg-green-900/20`}>
-                        <div className={`flex items-center ${userMenuOpen ? 'justify-center' : 'space-x-3'} mb-4`}>
-                          <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.2 }}>
-                            <Avatar className="h-10 w-10 ring-2 ring-green-500/30 ring-offset-2 ring-offset-background">
-                              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.name || user?.email || 'User'}`} />
-                              <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                            </Avatar>
-                          </motion.div>
-                          {!userMenuOpen && (
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{user?.name || 'User'}</p>
-                              <p className="text-xs text-muted-foreground truncate">{user?.email || 'No email'}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="py-1">
-                        <Link 
-                          to="/dashboard" 
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-white hover:bg-gray-800 transition-colors duration-200"
-                        >
-                          <LayoutDashboard className="h-4 w-4" />
-                          Dashboard
-                        </Link>
-                        <button
-                          onClick={logout}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-white hover:bg-gray-800 transition-colors duration-200"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          Sign Out
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <Avatar className="h-7 w-7 ring-1 ring-primary/30">
+                  <AvatarImage src="/user-avatar.png" alt="User Avatar" />
+                  <AvatarFallback className="bg-primary/20 text-xs">{user?.name?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+                </Avatar>
+
+                {/* Tiny verification dot */}
+                {user?.email_confirmed && (
+                  <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 bg-green-500 rounded-full border border-slate-800" />
+                )}
               </div>
-            </div>
+
+              {/* Minimal user info */}
+              <div className="flex flex-col justify-center">
+                <h2 className="text-xs font-medium text-white leading-tight truncate max-w-32">{user?.name || "User"}</h2>
+                <p className="text-xs text-gray-400 leading-tight truncate max-w-32">{user?.email || "user"}</p>
+              </div>
+            </motion.div>
           ) : (
-            <>
-              <Link to="/auth/login">
-                <Button 
-                  variant="outline" 
-                  className="border-gray-700 hover:border-primary hover:bg-primary/10 transition-all duration-300"
-                >
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/auth/register">
-                <Button 
-                  className="bg-gradient-to-r from-primary to-primary/80 text-background hover:opacity-90 transition-all duration-300"
-                >
-                  Register
-                </Button>
-              </Link>
-            </>
+            <div className="flex items-center gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Link to="/auth/login">
+                  <Button variant="outline" className="border-gray-700 hover:border-primary text-white hover:text-primary-foreground transition duration-300">
+                    Sign In
+                  </Button>
+                </Link>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Link to="/auth/register">
+                  <Button className="bg-primary text-white hover:bg-primary/80 transition duration-300 shadow-md shadow-primary/20">
+                    Register
+                  </Button>
+                </Link>
+              </motion.div>
+            </div>
           )}
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center gap-2">
-          <Button 
-            onClick={handleStartFree} 
-            size="sm" 
-            className="px-3 bg-gradient-to-r from-primary to-primary/80 text-background hover:opacity-90 transition-all duration-300"
-          >
-            Start Free
-          </Button>
+        {/* Mobile Menu Button */}
+        <motion.div
+          className="md:hidden flex items-center"
+          whileTap={{ scale: 0.9 }}
+        >
           <Button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             variant="ghost"
             size="sm"
-            className="p-1.5"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="bg-slate-800/30 hover:bg-slate-700/50 text-white rounded-lg p-2"
           >
             <motion.div
               animate={{ rotate: isMobileMenuOpen ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.3, type: "spring", stiffness: 260 }}
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </motion.div>
           </Button>
-        </div>
+        </motion.div>
       </div>
 
       {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div 
-            className="md:hidden border-t border-gray-800"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={mobileMenuVariants}
+          <motion.div
+            className="md:hidden border-t border-gray-800/30 bg-slate-900/90 backdrop-blur-lg shadow-lg"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{
+              opacity: 1,
+              height: "auto",
+              transition: {
+                duration: 0.4,
+                ease: "easeInOut"
+              }
+            }}
+            exit={{
+              opacity: 0,
+              height: 0,
+              transition: {
+                duration: 0.3,
+                ease: "easeInOut"
+              }
+            }}
           >
-            <div className="py-2">
-              <Link 
-                to="/docs" 
-                className="flex items-center px-4 py-3 hover:bg-gray-800/50 transition-colors duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <span className="text-sm font-medium text-white hover:text-primary">Documentation</span>
-              </Link>
-              
-              <a 
-                href="https://github.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-3 hover:bg-gray-800/50 transition-colors duration-200"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Github className="h-4 w-4" />
-                <span className="text-sm font-medium text-white hover:text-primary">GitHub</span>
-              </a>
-              
+            <div className="py-4 px-6 space-y-1">
+              <motion.div custom={0} variants={menuItemVariants} initial="hidden" animate="visible">
+                <Link to="/docs" className="block py-3 text-white hover:text-primary transition duration-300">
+                  Documentation
+                </Link>
+              </motion.div>
+
+              <motion.div custom={1} variants={menuItemVariants} initial="hidden" animate="visible">
+                <a
+                  href="https://github.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 py-3 text-white hover:text-primary transition duration-300"
+                >
+                  <Github className="h-5 w-5" />
+                  GitHub
+                </a>
+              </motion.div>
+
               {!user ? (
-                <div className="grid grid-cols-2 gap-2 p-3">
-                  <Link to="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" size="sm" className="w-full border-gray-700">Sign In</Button>
-                  </Link>
-                  <Link to="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button size="sm" className="w-full bg-gradient-to-r from-primary to-primary/80">Register</Button>
-                  </Link>
-                </div>
+                <motion.div custom={2} variants={menuItemVariants} initial="hidden" animate="visible">
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <Link to="/auth/login">
+                      <Button variant="outline" size="sm" className="w-full border-gray-700 hover:border-primary hover:text-primary">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link to="/auth/register">
+                      <Button size="sm" className="w-full bg-primary hover:bg-primary/80 text-white shadow-md shadow-primary/20">
+                        Register
+                      </Button>
+                    </Link>
+                  </div>
+                </motion.div>
               ) : (
                 <>
-                  <div className="px-4 py-3 border-t border-gray-800">
-                    <p className="text-sm font-medium text-white">{user.name || 'User'}</p>
-                    <p className="text-xs text-gray-400 truncate">{user.email || 'user@example.com'}</p>
-                  </div>
-                  <Link 
-                    to="/dashboard" 
-                    className="flex items-center gap-2 px-4 py-3 hover:bg-gray-800/50 transition-colors duration-200"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span className="text-sm font-medium">Dashboard</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full text-left flex items-center gap-2 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800/50 transition-colors duration-200"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
+                  <motion.div custom={2} variants={menuItemVariants} initial="hidden" animate="visible">
+                    <div className="mt-4 border-t border-gray-700/50 pt-4">
+                      <p className="text-sm font-medium text-white">{user?.name || "User"}</p>
+                      <p className="text-xs text-gray-400">{user?.email || "user@example.com"}</p>
+                    </div>
+                  </motion.div>
+
+                  <motion.div custom={3} variants={menuItemVariants} initial="hidden" animate="visible">
+                    <Link to="/dashboard" className="block py-3 flex items-center gap-2 text-white hover:text-primary">
+                      <LayoutDashboard className="h-5 w-5" />
+                      Dashboard
+                    </Link>
+                  </motion.div>
+
+                  <motion.div custom={4} variants={menuItemVariants} initial="hidden" animate="visible">
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full text-left flex items-center gap-2 py-3 text-white hover:text-primary transition duration-300"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Sign Out
+                    </button>
+                  </motion.div>
                 </>
               )}
             </div>
@@ -299,5 +270,5 @@ export const Navbar = () => {
         )}
       </AnimatePresence>
     </motion.nav>
-  )
-} 
+  );
+};

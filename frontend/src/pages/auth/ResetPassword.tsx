@@ -16,6 +16,9 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
 
+
+  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -66,6 +69,7 @@ export default function ResetPassword() {
       })
       
       navigate('/auth/login')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         title: "Error",

@@ -5,8 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-
-
+  
   if (!user) {
     toast({
       title: "Error",

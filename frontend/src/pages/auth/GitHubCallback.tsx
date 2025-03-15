@@ -10,6 +10,8 @@ export default function GitHubCallback() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  
+
   useEffect(() => {
     const handleCallback = async () => {
       try {

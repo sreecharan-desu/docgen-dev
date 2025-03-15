@@ -12,8 +12,12 @@ import EmailVerification from "./pages/auth/EmailVerification";
 import GoogleCallback from "./pages/auth/GoogleCallback";
 import GitHubCallback from "./pages/auth/GitHubCallback";
 import NotFound from "./pages/NotFound";
+import useIsAuth from "./hooks/isAuth";
 
 export const AppRoutes = () => {
+
+  // useIsAuth(); // Redirects user to login page if not authenticated
+
   return (
     <>
       <Navbar />

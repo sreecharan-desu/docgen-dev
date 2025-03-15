@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { API_URL } from "@/utils/config"
+import useIsAuth from "@/hooks/isAuth"
 
 export default function EmailVerification() {
   const [verifying, setVerifying] = useState(true)
@@ -13,6 +15,8 @@ export default function EmailVerification() {
   const token = searchParams.get('token')
   const type = searchParams.get('type')
 
+  useIsAuth()
+  
   useEffect(() => {
     const verifyEmail = async () => {
       if (!token) {

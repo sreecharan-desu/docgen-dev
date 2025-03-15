@@ -7,8 +7,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AppRoutes } from "./AppRoutes";
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import { Analytics } from "@vercel/analytics/react"
+import useIsAuth from "./hooks/isAuth";
 
 const queryClient = new QueryClient();
+
 
 const App = () => (
   <BrowserRouter>

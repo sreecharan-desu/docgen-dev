@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from '@/components/ui/use-toast'
 
 interface User {
+  email_confirmed: any
+  created_at: any
   id: string
   email: string
   name?: string
