@@ -110,11 +110,11 @@ const Sidebar = ({
       </motion.button>
 
       {/* User profile */}
-      <motion.div 
+      <motion.div
         className="p-4 border-b border-slate-200/20 dark:border-slate-800/40 flex flex-col items-center"
         layout
       >
-        <motion.div 
+        <motion.div
           className="relative mb-2"
           variants={avatarVariants}
           initial="initial"
@@ -126,24 +126,24 @@ const Sidebar = ({
               {getUserInitials()}
             </AvatarFallback>
           </Avatar>
-          <motion.div 
+          <motion.div
             className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.5 }}
           />
         </motion.div>
-        
+
         <AnimatePresence mode="wait">
           {!isSidebarCollapsed && (
-            <motion.div 
+            <motion.div
               className="text-center"
               variants={textVariants}
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
             >
-              <motion.p 
+              <motion.p
                 className="font-medium dark:text-slate-200 text-white"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ const Sidebar = ({
               >
                 {user?.name || 'User'}
               </motion.p>
-              <motion.p 
+              <motion.p
                 className="text-xs text-slate-500 dark:text-slate-400 truncate"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -169,7 +169,7 @@ const Sidebar = ({
         {navItems.map((item) => {
           const isActive = activeSection === item.id;
           const isHovered = hoveredItem === item.id;
-          
+
           return (
             <TooltipProvider key={item.id}>
               <Tooltip>
@@ -181,7 +181,7 @@ const Sidebar = ({
                   >
                     <Button
                       variant="ghost"
-                      className={`w-full ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-start'} relative h-10 group`}
+                      className={`w-full ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-start'} relative h-10 group bg-transaprent hover:border-primary`}
                       onClick={() => handleItemClick(item.id)}
                     >
                       {/* Animated background */}
@@ -193,18 +193,18 @@ const Sidebar = ({
                           transition={{ duration: 0.3, type: "spring", stiffness: 400, damping: 30 }}
                         />
                       )}
-                      
+
                       {/* Hover effect */}
                       {!isActive && isHovered && (
-                        <motion.span 
-                          className="absolute inset-0  dark:bg-slate-800/50 rounded-md z-0"
+                        <motion.span
+                          className="absolute inset-0  bg-transaprent hover:border-primary rounded-md z-0"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.2 }}
                         />
                       )}
-                      
+
                       {/* Icon */}
                       <motion.div
                         className="relative z-10"
@@ -214,7 +214,7 @@ const Sidebar = ({
                       >
                         <item.icon className={`h-4 w-4 ${isSidebarCollapsed ? '' : 'mr-3'} ${isActive ? 'text-primary' : 'text-slate-600 dark:text-slate-400'}`} />
                       </motion.div>
-                      
+
                       {/* Text */}
                       <AnimatePresence mode="wait">
                         {!isSidebarCollapsed && (
@@ -244,7 +244,7 @@ const Sidebar = ({
       </nav>
 
       {/* Footer */}
-      <motion.div 
+      <motion.div
         className="p-3 border-t border-slate-200/20 dark:border-slate-800/40 space-y-1.5"
         layout
       >
@@ -263,15 +263,15 @@ const Sidebar = ({
                   >
                     {/* Hover effect */}
                     {hoveredItem === item.id && (
-                      <motion.span 
-                        className={`absolute inset-0 rounded-md z-0 ${item.danger ? 'dark:bg-primary/20' : ' dark:bg-slate-800/50'}`}
+                      <motion.span
+                        className={`absolute inset-0 rounded-md z-0 bg-transaprent hover:border-primary ${item.danger ? 'dark:bg-primary/20' : ' dark:bg-slate-800/50'}`}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                       />
                     )}
-                    
+
                     {/* Icon */}
                     <motion.div
                       className="relative z-10"
@@ -281,7 +281,7 @@ const Sidebar = ({
                     >
                       <item.icon className={`h-4 w-4 ${isSidebarCollapsed ? '' : 'mr-3'} ${item.danger ? 'text-slate-600 dark:text-slate-400 group-hover:dark:bg-primary/20' : 'text-slate-600 dark:text-slate-400'}`} />
                     </motion.div>
-                    
+
                     {/* Text */}
                     <AnimatePresence mode="wait">
                       {!isSidebarCollapsed && (

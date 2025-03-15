@@ -94,7 +94,7 @@ const Dashboard = () => {
           {/* Breadcrumb Navigation */}
           <div className="hidden md:flex items-center text-sm text-muted-foreground mb-8">
             <Home className="h-3.5 w-3.5 mr-1" />
-            <span className="mx-1">Dashboard</span>
+            <span className="mx-1 text-white">Dashboard</span>
             <ChevronRight className="h-3.5 w-3.5 mx-1 text-muted-foreground/50" />
             <span className="mx-1 capitalize text-white font-medium text-foreground">{activeSection.replace("-", " ")}</span>
           </div>

@@ -141,7 +141,7 @@ export const Navbar = () => {
             <div className="flex items-center gap-3">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Link to="/auth/login">
-                  <Button variant="outline" className="border-gray-700 hover:border-primary text-white hover:text-primary-foreground transition duration-300">
+                  <Button variant="outline" size="sm" className="w-full border-gray-700 hover:bg-transaprent hover:border-primary hover:text-primary">
                     Sign In
                   </Button>
                 </Link>
@@ -232,7 +232,7 @@ export const Navbar = () => {
                 <motion.div custom={2} variants={menuItemVariants} initial="hidden" animate="visible">
                   <div className="grid grid-cols-2 gap-3 mt-4">
                     <Link to="/auth/login">
-                      <Button variant="outline" size="sm" className="w-full border-gray-700 hover:border-primary hover:text-primary">
+                      <Button variant="outline" size="sm" className="w-full border-gray-700 hover:bg-primary/80 hover:border-primary hover:text-primary">
                         Sign In
                       </Button>
                     </Link>

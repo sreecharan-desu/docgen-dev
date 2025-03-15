@@ -55,7 +55,7 @@ export default function Login() {
         <Button
           type="button"
           variant="outline"
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full flex items-center justify-center gap-2 bg-transaprent hover:border-primary"
           onClick={loginWithGoogle}
         >
           <FcGoogle className="w-5 h-5" />
@@ -67,7 +67,7 @@ export default function Login() {
         <Button
           type="button"
           variant="outline"
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full flex items-center justify-center gap-2 bg-transaprent hover:border-primary"
           onClick={handleGithubLogin}
           disabled={isGithubLoading}
         >
