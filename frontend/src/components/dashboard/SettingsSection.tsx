@@ -91,35 +91,31 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
   };
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.7, type: "spring", stiffness: 100 }
-    }
+      transition: { duration: 0.4, type: "spring", stiffness: 150 },
+    },
   };
 
   const inputVariants = {
     idle: { scale: 1 },
-    focus: { scale: 1.02, boxShadow: "0 0 15px rgba(56, 189, 248, 0.4)", transition: { duration: 0.3 } }
+    focus: { scale: 1.02, boxShadow: "0 0 12px rgba(56, 189, 248, 0.4)", transition: { duration: 0.2 } },
   };
 
   const buttonVariants = {
     idle: { scale: 1 },
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.95, transition: { duration: 0.1 } }
+    hover: { scale: 1.04, transition: { duration: 0.15 } },
+    tap: { scale: 0.95, transition: { duration: 0.1 } },
   };
 
   const glowVariants = {
-    initial: { opacity: 0.3 },
+    initial: { opacity: 0.4 },
     animate: {
-      opacity: [0.3, 0.6, 0.3],
-      transition: {
-        duration: 4,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
+      opacity: [0.4, 0.7, 0.4],
+      transition: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+    },
   };
 
   const formatDate = (dateString: any) => {
