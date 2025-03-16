@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Menu, Home, ChevronRight } from "lucide-react";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/dashboard/Sidebar";
@@ -9,6 +9,7 @@ import BillingSection from "@/components/dashboard/BillingSection";
 import SettingsSection from "@/components/dashboard/SettingsSection";
 import ProjectsSection from "@/components/dashboard/ProjectsSection";
 import { DashboardSection } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 // Skeleton loader component
 const SkeletonLoader = () => (
@@ -24,6 +25,15 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("projects");
   const { user, logout } = useAuth();
 
+
+  useEffect(() => {
+    const location = window.location.pathname
+    console.log("Condition",location == "/dashboard" && !localStorage.getItem("token"))
+    if (location == "/dashboard" && !localStorage.getItem("token")) {
+      setTimeout(()=>navigate('/'),2000)
+    }
+  }, [])
+
   // Extract user initials for Avatar fallback
   const getUserInitials = () => {
     if (!user?.name) return "U";
@@ -35,15 +45,20 @@ const Dashboard = () => {
       .substring(0, 2);
   };
 
+  const navigate = useNavigate()
+
   // Render content based on active section
   const renderContent = () => {
     switch (activeSection) {
-      case "billing":
+      case "pricing":
         return <BillingSection />;
       case "projects":
         return <ProjectsSection />;
       case "settings":
         return <SettingsSection user={user} />;
+      case "docs":
+          navigate("/docs");
+          return;
       default:
         return <ProjectsSection />;
     }

@@ -1,3 +1,11 @@
 export const CREATE_PROJECT_API = 'https://api2.docgen.dev/api/v1/project/create-project'
 export const SEND_CODE_API = ''
 export const UPDATE_USER_DETAILS_API = ''
+export const GET_SINGLE_PROJECT_API = 'https://api2.docgen.dev/api/v1/project/get-project/'
+export const RENAME_SINGLE_PROJECT_API = 'https://api2.docgen.dev/api/v1/project/update-project/'
+export const DELETE_SINGLE_PROJECT_API = 'https://api2.docgen.dev/api/v1/project/delete-project/'
+export const IMPORT_GITHUB_REPO_API = ''
+export const UPLOAD_LOCAL_FILES_API = ''
+export const GITHUB_CODE_EXCHANGE_API = ''
+
+

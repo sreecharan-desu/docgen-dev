@@ -21,18 +21,26 @@ export default function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
+  useEffect(() => {
+    const location = window.location.pathname
+    console.log("Condition",location == "/auth/login" && localStorage.getItem("token"))
+    if (location == "/auth/login" && localStorage.getItem("token")) {
+      setTimeout(()=>navigate('/dashboard'),2000)
+    }
+  }, [])
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { 
+    visible: {
       opacity: 1,
-      transition: { 
+      transition: {
         staggerChildren: 0.1,
         delayChildren: 0.2
       }
     }
   }
-  
+
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: { y: 0, opacity: 1 }
@@ -97,10 +105,10 @@ export default function Login() {
         animate={{ opacity: 0.7 }}
         transition={{ duration: 1.5 }}
       />
-      
+
       {/* Background pattern */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-      
+
       {/* Floating particles */}
       {Array(8).fill().map((_, i) => (
         <motion.div
@@ -127,8 +135,8 @@ export default function Login() {
           }}
         />
       ))}
-      
-      <motion.div 
+
+      <motion.div
         className="w-full max-w-md space-y-8 p-8 border rounded-xl rgba(30, 41, 59, 0.4) border-white backdrop-blur-sm shadow-xl relative z-10"
         variants={containerVariants}
         initial="hidden"
@@ -155,8 +163,8 @@ export default function Login() {
             {isGoogleLoading ? "Connecting..." : "Continue with Google"}
           </Button>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           className="relative flex items-center justify-center"
           variants={itemVariants}
         >
@@ -165,7 +173,7 @@ export default function Login() {
             Or
           </span>
         </motion.div>
-        
+
         <motion.div variants={itemVariants}>
           <Button
             type="button"
@@ -263,7 +271,7 @@ export default function Login() {
           </motion.div>
         )} */}
 
-        <motion.p 
+        <motion.p
           className="text-center text-sm text-muted-foreground"
           variants={itemVariants}
         >

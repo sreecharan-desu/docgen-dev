@@ -68,10 +68,11 @@ export const Navbar = () => {
             className="h-10 w-10 transition-transform duration-300"
             whileHover={{
               scale: 1.15,
-              rotate: [0, -10, 10, -5, 0],
+              rotate: 0, // removed the tilting keyframes
               transition: { duration: 0.5 }
             }}
           />
+
           <motion.span
             className="font-semibold text-lg text-white group-hover:text-primary transition duration-300"
             whileHover={{
@@ -85,31 +86,6 @@ export const Navbar = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6">
-          <motion.div
-            whileHover={{
-              scale: 1.03,
-              transition: { type: "spring", stiffness: 400, damping: 10 }
-            }}
-          >
-            <Link
-              to="/docs"
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium text-gray-200 hover:text-primary transition-colors duration-200 group"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                className="w-4 h-4 stroke-gray-300 group-hover:stroke-primary transition-colors duration-200"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-              </svg>
-              <span>Docs</span>
-            </Link>
-          </motion.div>
 
           {user ? (
             <motion.div
@@ -234,31 +210,7 @@ export const Navbar = () => {
             }}
           >
             <div className="py-4 px-6 space-y-1">
-              <motion.div
-                whileHover={{
-                  scale: 1.03,
-                  transition: { type: "spring", stiffness: 400, damping: 10 }
-                }}
-              >
-                <Link
-                  to="/docs"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium text-gray-200 hover:text-primary transition-colors duration-200 group"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    className="w-4 h-4 stroke-gray-300 group-hover:stroke-primary transition-colors duration-200"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                  </svg>
-                  <span>Docs</span>
-                </Link>
-              </motion.div>
+
 
               {!user ? (
                 <motion.div custom={2} variants={menuItemVariants} initial="hidden" animate="visible">

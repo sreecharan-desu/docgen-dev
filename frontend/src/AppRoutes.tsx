@@ -38,11 +38,11 @@ export const AppRoutes = () => {
           <Route
             path="/dashboard"
             element={
-              // <ProtectedRoute>
+              <ProtectedRoute>
               <Suspense fallback={<LoadingAnimation />}>
                 <Dashboard />
               </Suspense>
-              // </ProtectedRoute>
+              </ProtectedRoute>
             }
           />
           <Route

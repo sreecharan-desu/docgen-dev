@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
-import { FolderKanban, CreditCard, Settings, LogOut, ChevronRight, HelpCircle } from "lucide-react";
+import { FolderKanban, CreditCard, Settings, LogOut, ChevronRight, HelpCircle, Link as LinkIcon } from "lucide-react";
 import { User as UserType } from "@/types";
 import { useNavigate } from "react-router-dom";
 
@@ -41,8 +41,9 @@ const Sidebar = ({
   // Navigation items
   const navItems = [
     { id: 'projects', label: 'Projects', icon: FolderKanban },
-    { id: 'Pricing', label: 'Pricing', icon: CreditCard },
+    { id: 'pricing', label: 'Pricing', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'docs', label: 'Docs', icon: LinkIcon }
   ];
 
   // Footer items
@@ -55,11 +56,6 @@ const Sidebar = ({
   const sidebarVariants = {
     expanded: { width: 240, transition: { duration: 0.3, ease: "easeInOut" } },
     collapsed: { width: 72, transition: { duration: 0.3, ease: "easeInOut" } }
-  };
-
-  const itemVariants = {
-    collapsed: { x: -10, opacity: 0 },
-    expanded: { x: 0, opacity: 1 }
   };
 
   const iconVariants = {
@@ -181,7 +177,7 @@ const Sidebar = ({
                   >
                     <Button
                       variant="ghost"
-                      className={`w-full ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-start'} relative h-10 group bg-transaprent hover:border-primary`}
+                      className={`w-full ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-start'} relative h-10 group bg-transparent hover:border-primary`}
                       onClick={() => handleItemClick(item.id)}
                     >
                       {/* Animated background */}
@@ -197,7 +193,7 @@ const Sidebar = ({
                       {/* Hover effect */}
                       {!isActive && isHovered && (
                         <motion.span
-                          className="absolute inset-0  bg-transaprent hover:border-primary rounded-md z-0"
+                          className="absolute inset-0 bg-transparent hover:border-primary rounded-md z-0"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
@@ -264,7 +260,7 @@ const Sidebar = ({
                     {/* Hover effect */}
                     {hoveredItem === item.id && (
                       <motion.span
-                        className={`absolute inset-0 rounded-md z-0 bg-transaprent hover:border-primary ${item.danger ? 'dark:bg-primary/20' : ' dark:bg-slate-800/50'}`}
+                        className={`absolute inset-0 rounded-md z-0 bg-transparent hover:border-primary ${item.danger ? 'dark:bg-primary/20' : ' dark:bg-slate-800/50'}`}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}

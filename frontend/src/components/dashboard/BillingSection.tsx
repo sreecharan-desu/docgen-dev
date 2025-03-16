@@ -25,7 +25,11 @@ const BillingSection = () => {
         "5 API keys",
         "10,000 requests/month",
         "Free support",
-        "7-day log retention"
+        "7-day log retention",
+        "","","","",
+        "","","","",
+        "","",""
+
       ],
       buttonText: "Get Started",
       buttonStyle: "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/60"
@@ -219,7 +223,7 @@ const BillingSection = () => {
             <Sparkles className="h-4 w-4 text-emerald-400" />
           </motion.div>
           <span className="text-xs font-medium text-emerald-300">
-            Trusted by over 2,500+ businesses worldwide
+            Trusted by over 2,500+ busineFreesses worldwide
           </span>
         </motion.div>
 
@@ -285,267 +289,87 @@ const BillingSection = () => {
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
           <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-          <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-          <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.248 3.84a1 1 0 00.95.69h4.038c.969 0 1.372 1.24.588 1.81l-3.262 2.37a1 1 0 00-.364 1.118l1.248 3.84c.3.92-.755 1.687-1.54 1.118l-3.262-2.37a1 1 0 00-1.176 0l-3.262 2.37c-.785.57-1.84-.198-1.54-1.118l1.248-3.84a1 1 0 00-.364-1.118L2.225 9.267c-.785-.57-.38-1.81.588-1.81h4.038a1 1 0 00.95-.69l1.248-3.84z" />
           </svg>
         </motion.div>
       </motion.div>
 
-          <br />
+      <br />
 
-      {/* Pricing Cards */}
-      <motion.div
-        ref={plansRef}
-        variants={itemVariants}
-        initial="hidden"
-        animate={isInView ? "visible" : "hidden"}
-        className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6 mb-20"
-      >
-        {plans.map((plan) => (
-          <motion.div
-            key={plan.id}
-            variants={planVariants}
-            initial="initial"
-            animate={getPlanVariant(plan.id)}
-            whileHover="hover"
-            onClick={() => setSelectedPlan(plan.id)}
-            onHoverStart={() => setHoveredPlan(plan.id)}
-            onHoverEnd={() => setHoveredPlan(null)}
-            className={`relative rounded-xl backdrop-blur-sm border transition-all duration-300 cursor-pointer
-              ${plan.id === selectedPlan
-                ? 'border-emerald-300 dark:border-emerald-500/50 shadow-xl shadow-emerald-500/10 rgba(30, 41, 59, 1) dark:bg-slate-800/90'
-                : 'border-slate-200/60 dark:border-slate-700/40 shadow-sm hover:shadow-md rgba(30, 41, 59, 1)/60 dark:bg-slate-800/50'
-              }
-              ${plan.popular ? 'ring-1 ring-emerald-500/50 dark:ring-emerald-400/30' : ''}
-            `}
-          >
-            {/* Popular badge */}
-            {plan.popular && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, type: "spring" }}
-                className="absolute -top-3 rounded-full px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-medium shadow-lg shadow-emerald-500/20 left-1/2 transform -translate-x-1/2"
-              >
-                Most Popular
-              </motion.div>
-            )}
-
-            <div className="p-6 sm:p-8">
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-bold flex items-center gap-2">
-                    {plan.name}
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{plan.description}</p>
+      {/* Pricing Plans */}
+      <motion.div ref={plansRef} className="grid md:grid-cols-3 gap-6" variants={containerVariants}>
+        {plans.map((plan, index) => {
+          const isPopular = plan.popular;
+          return (
+            <motion.div
+              key={plan.id}
+              variants={itemVariants}
+              initial="initial"
+              animate={isInView ? getPlanVariant(plan.id) : "initial"}
+              whileHover="hover"
+              onHoverStart={() => setHoveredPlan(plan.id)}
+              onHoverEnd={() => setHoveredPlan(null)}
+              onClick={() => setSelectedPlan(plan.id)}
+              className={`relative p-6 rounded-2xl border border-slate-700 bg-gradient-to-b ${plan.accent} shadow-lg transition-all cursor-pointer`}
+            >
+              {isPopular && (
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 px-3 py-1 bg-emerald-600 text-white text-xs font-bold uppercase rounded-full shadow-md">
+                  Most Popular
                 </div>
-
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${plan.accent} bg-opacity-10`}>
-                  <plan.icon className="h-5 w-5 text-white" />
-                </div>
-              </div>
-
-              {/* Pricing */}
-              <div className="mt-6 flex items-baseline">
-                <span className="text-3xl font-bold tracking-tight">{plan.price}</span>
-                {plan.period !== "quote" && (
-                  <span className="text-slate-500 dark:text-slate-400 text-sm ml-2">/{plan.period}</span>
-                )}
-              </div>
-
-              {/* Savings note */}
-              {plan.savings && (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">{plan.savings}</p>
               )}
 
-              {/* Divider */}
-              <div className="h-px w-full bg-slate-100 dark:bg-slate-700/30 my-6"></div>
+              <div className="flex items-center gap-4 mb-4">
+                <plan.icon className="h-8 w-8 text-white" />
+                <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
+              </div>
 
-              {/* Features list */}
-              <motion.div
-                variants={staggerFeatures}
-                initial="hidden"
-                animate="visible"
-                className="space-y-3"
-              >
-                {plan.features.map((feature) => (
-                  <motion.div
-                    key={feature}
-                    variants={featureItem}
-                    className="flex items-center gap-3"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{feature}</span>
-                  </motion.div>
+              <p className="text-slate-200 mb-4">{plan.description}</p>
+
+              <div className="text-white text-4xl font-bold">{plan.price}</div>
+              <div className="text-slate-400 text-sm">{plan.period === "monthly" ? "/month" : "Custom pricing available"}</div>
+              {plan.savings && <div className="text-emerald-300 text-xs mt-1">{plan.savings}</div>}
+
+              <ul className="mt-6 space-y-2">
+                {plan.features.map((feature, i) => (
+                  <motion.li key={i} variants={featureItem} className="flex items-center gap-2 text-white">
+                    {feature != "" ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <></>}
+                    {feature}
+                  </motion.li>
                 ))}
-              </motion.div>
+              </ul>
 
-              {/* CTA Button */}
-              <motion.button
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                className={`mt-8 w-full rounded-lg py-3 px-4 text-sm font-medium shadow-sm transition-all ${plan.buttonStyle} hover:shadow-md ${plan.id === selectedPlan ? 'ring-2 ring-emerald-500/50' : ''}`}
-              >
-                {plan.buttonText}
-              </motion.button>
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-     
-
-      {/* Consultation Banner */}
-      <motion.div
-        variants={itemVariants}
-        whileHover={{ scale: 1.01 }}
-        className="mt-8 mb-16 rounded-xl overflow-hidden bg-gradient-to-r rgba(30, 41, 59, 1) dark:from-emerald-900/20 dark:to-teal-900/20 shadow-lg"
-      >
-        <div className="p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <motion.div
-              whileHover={{ rotate: 15 }}
-              transition={{ type: "spring", stiffness: 300, damping: 10 }}
-              className="rgba(30, 41, 59, 1) dark:bg-slate-800 p-3 rounded-full shadow-md"
-            >
-              <HelpCircle className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
+              <Button className={`mt-6 w-full py-3 rounded-lg ${plan.buttonStyle}`}>{plan.buttonText}</Button>
             </motion.div>
-            <div>
-              <h3 className="text-lg font-bold mb-1.5">Not sure which plan is right for you?</h3>
-              <p className="text-slate-600 dark:text-slate-400">Get personalized recommendations from our experts</p>
-            </div>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-6 py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 transition-all whitespace-nowrap"
-          >
-            Schedule a Demo
-          </motion.button>
-        </div>
+          );
+        })}
       </motion.div>
 
       {/* FAQ Section */}
-      <EnhancedFAQs />
-      {/* Final CTA with urgency and guarantee */}
-      <motion.div
-        variants={itemVariants}
-        className="mt-20 text-center"
-      >
-        <div className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 px-3 py-1 mb-4">
-          <CreditCard className="h-4 w-4 text-emerald-500" />
-          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-            30-day money-back guarantee
-          </span>
-        </div>
-
-        <h2 className="text-2xl sm:text-3xl font-bold mb-6">Ready to supercharge your API experience?</h2>
-        <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-8">
-          Join thousands of developers who've already upgraded their workflow
-        </p>
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.98 }}
-          className="px-8 py-3 rounded-lg text-base font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 transition-all"
-        >
-          Get Started Today
-        </motion.button>
-
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-4">
-          No credit card required for free trial
-        </p>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-// Enhanced FAQ component to complete the missing piece
-const EnhancedFAQs = () => {
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-
-  // FAQ data
-  const faqs = [
-    {
-      question: "How do I upgrade or downgrade my plan?",
-      answer: "You can change your plan anytime from your account settings. Changes take effect immediately, and we'll prorate your billing automatically. No technical interruptions to your service."
-    },
-    {
-      question: "What happens if I exceed my monthly limit?",
-      answer: "Your service continues uninterrupted. We'll notify you and offer options to upgrade or add capacity. Your critical operations will never be cut off mid-month."
-    },
-    {
-      question: "Do you offer a free trial?",
-      answer: "Yes! All plans include a 14-day full-feature trial with no credit card required. Start building immediately and decide later which plan suits your needs."
-    },
-    {
-      question: "Is there a setup fee?",
-      answer: "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and Free support."
-    }
-  ];
-
-  const toggleFaq = (index: number) => {
-    setExpandedFaq(expandedFaq === index ? null : index);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="max-w-3xl mx-auto"
-    >
-      <div className="text-center mb-10">
-        <h2 className="text-2xl font-bold mb-2">Frequently Asked Questions</h2>
-        <p className="text-slate-500 dark:text-slate-400">
-          Have more questions? <a href="#" className="text-emerald-600 dark:text-emerald-400 hover:underline">Contact our support team</a>
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        {faqs.map((faq, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 + 0.4 }}
-            className="border border-slate-200 dark:border-slate-700/40 rounded-lg overflow-hidden"
-          >
-            <button
-              className="flex justify-between items-center w-full p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-              onClick={() => toggleFaq(index)}
-            >
-              <span className="font-medium">{faq.question}</span>
-              <ChevronDown
-                className={`h-5 w-5 text-slate-400 transition-transform ${expandedFaq === index ? "transform rotate-180" : ""
-                  }`}
-              />
-            </button>
-
-            <AnimatePresence>
-              {expandedFaq === index && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="p-4 pt-0 text-slate-600 dark:text-slate-300 text-sm bg-slate-50/50 dark:bg-slate-800/30">
+      <motion.div className="mt-16 max-w-3xl mx-auto" variants={containerVariants}>
+        <h2 className="text-3xl font-bold text-white text-center mb-6">Frequently Asked Questions</h2>
+        <div className="space-y-4">
+          {faqs.map((faq, index) => (
+            <motion.div key={index} variants={itemVariants} className="border border-slate-700 p-4 rounded-lg bg-slate-800/40">
+              <button className="flex justify-between items-center w-full text-white text-lg font-medium" onClick={() => toggleFaq(index)}>
+                {faq.question}
+                <ChevronDown className={`w-5 h-5 transition-transform ${expandedFaq === index ? "rotate-180" : ""}`} />
+              </button>
+              <AnimatePresence>
+                {expandedFaq === index && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="text-slate-300 mt-2"
+                  >
                     {faq.answer}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        ))}
-      </div>
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
     </motion.div>
   );
 };
