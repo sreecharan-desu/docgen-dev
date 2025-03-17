@@ -1,905 +1,410 @@
-import { projectAtom } from "@/store/store";
-import { useRecoilState } from "recoil";
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import {
-    AlertCircle,
-    Pencil,
-    Trash2,
-    Loader2,
-    Upload,
-    Github,
-    Calendar,
-    MoreHorizontal,
-    FolderOpen,
-    FilePlus2,
-    Link,
-    ExternalLink,
-    Terminal,
-    Zap,
-    Moon,
-    Sun,
-    X,
-    Check,
-    ChevronRight
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSeparator,
-    DropdownMenuLabel
-} from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/components/ui/use-toast";
+import { ChevronLeft, PlusCircle, Users, FileText, Loader2, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-    DELETE_SINGLE_PROJECT_API,
-    GET_SINGLE_PROJECT_API,
-    RENAME_SINGLE_PROJECT_API,
-    IMPORT_GITHUB_REPO_API,
-    UPLOAD_LOCAL_FILES_API
-} from "@/utils/apis";
+import { motion, AnimatePresence } from "framer-motion";
+import Sidebar from "@/components/dashboard/Sidebar";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Configuration
-const config = {
-    GITHUB_CLIENT_ID: "Ov23livmcOJdTGJwAtnB",
-    API_URI: "YOUR_API_URI"
+// Custom Components
+import ImportRepoModal from "../components/ImportRepoModal";
+import EmptyState from "../components/EmptyState";
+import MdPreview from "../components/MdPreview";
+import { Label } from "recharts";
+import { Input } from "@/components/ui/input";
+
+// API Placeholders (Mocked for now, replace with real API calls)
+const GET_PROJECT_API = async (projectId, token) => {
+  return { name: `Project ${projectId}`, id: projectId };
 };
 
-export default function ProjectPage() {
-    const [projectDetails, setProjectDetails] = useRecoilState(projectAtom);
-    const JWT_TOKEN = `Bearer ${localStorage.getItem("token")}`;
+const GET_REPOS_API = async (projectId, userId, token) => {
+  return JSON.parse(localStorage.getItem(`repos_${projectId}_${userId}`)) || [];
+};
 
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const location = useLocation();
-    const auth = useAuth();
-    const { toast } = useToast();
+const IMPORT_REPO_API = async (projectId, userId, repoData, token) => {
+  const newRepo = {
+    id: Date.now(),
+    ...repoData,
+    files: ["index.js", "styles.css", "utils.js"],
+    userId,
+    projectId,
+    documentationHistory: [], // Initialize history
+  };
+  return newRepo;
+};
 
-    const [project, setProject] = useState(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [newName, setNewName] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [showGithubDialog, setShowGithubDialog] = useState(false);
-    const [showLocalUploadDialog, setShowLocalUploadDialog] = useState(false);
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [githubRepo, setGithubRepo] = useState("");
-    const [files, setFiles] = useState(null);
-    const [importLoading, setImportLoading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [selectedTab, setSelectedTab] = useState("overview");
-    const [theme, setTheme] = useState(() => {
-        return localStorage.getItem("theme") || "light";
-    });
-    const [recentActivity, setRecentActivity] = useState([]);
+const GENERATE_DOCS_API = async (repo, token) => {
+  await new Promise((resolve) => setTimeout(resolve, 3000)); // Fake delay
+  const mockDocs = `
+# ${repo.name} Documentation
 
-    useEffect(() => {
-        // Check for the OAuth code in URL
-        const urlParams = new URLSearchParams(location.search);
-        const code = urlParams.get('code');
+## Overview
+This is a clean, minimalistic documentation for the ${repo.name} repository.
 
-        if (code) {
-            exchangeCodeForToken(code);
-        }
-    }, [location]);
+## Files
+${repo.files.map((file) => `- **${file}**: Automatically generated description`).join("\n")}
 
-    // Exchange code for token
-    const exchangeCodeForToken = async (code) => {
-        try {
-            const response = await fetch(`${config.API_URI}/github/oauth/callback`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: JWT_TOKEN,
-                },
-                body: JSON.stringify({
-                    code,
-                    projectId: id
-                }),
-            });
+## Usage
+\`\`\`javascript
+console.log("Hello from ${repo.name}");
+\`\`\`
 
-            if (!response.ok) throw new Error('Failed to exchange GitHub code');
+Generated on: ${new Date().toLocaleDateString()}
+  `;
+  return mockDocs;
+};
 
-            const data = await response.json();
-            localStorage.setItem('github_token', data.access_token);
+const ProjectRepositories = () => {
+  const { id: projectId } = useParams();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-            setProject(prev => ({
-                ...prev,
-                github_connected: true,
-                github_username: data.github_username
-            }));
+  const [project, setProject] = useState(null);
+  const [repositories, setRepositories] = useState([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isRepoPreviewOpen, setIsRepoPreviewOpen] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState(null);
+  const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
+  const [documentation, setDocumentation] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [collaborators, setCollaborators] = useState(3);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+  const [permission, setPermission] = useState("read");
 
-            setRecentActivity(prev => [{
-                id: Date.now(),
-                type: "connection",
-                description: `GitHub account connected: ${data.github_username}`,
-                timestamp: new Date().toISOString(),
-                user: auth.user?.email || "user@example.com"
-            }, ...prev]);
+  const JWT_TOKEN = localStorage.getItem("token") || "mock-token";
 
-            toast({
-                title: "GitHub Connected",
-                description: `Successfully connected: ${data.github_username}`,
-                variant: "success"
-            });
-        } catch (err) {
-            setError(err.message);
-            toast({
-                title: "Connection Failed",
-                description: err.message,
-                variant: "destructive"
-            });
-        }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const projectData = await GET_PROJECT_API(projectId, JWT_TOKEN);
+        const repoData = await GET_REPOS_API(projectId, user?.id, JWT_TOKEN);
+        setProject(projectData);
+        setRepositories(repoData);
+      } catch (error) {
+        toast.error("Failed to load project data");
+      }
     };
+    fetchData();
+  }, [projectId, user]);
 
-    // Format date
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        }).format(date);
-    };
+  const handleImportSubmit = async (url, type, source) => {
+    try {
+      const repoData = { name: url.split("/").pop(), url, type, source };
+      const newRepo = await IMPORT_REPO_API(projectId, user?.id, repoData, JWT_TOKEN);
+      const updatedRepos = [...repositories, newRepo];
+      setRepositories(updatedRepos);
+      localStorage.setItem(`repos_${projectId}_${user?.id}`, JSON.stringify(updatedRepos));
+      toast.success("Repository imported successfully");
+      setIsImportModalOpen(false);
+    } catch (error) {
+      toast.error("Failed to import repository");
+    }
+  };
 
-    // Toggle theme
-    const toggleTheme = () => {
-        const newTheme = theme === "light" ? "dark" : "light";
-        setTheme(newTheme);
-        localStorage.setItem("theme", newTheme);
-        document.documentElement.classList.toggle("dark");
-    };
+  const handleRepoClick = (repo) => {
+    setSelectedRepo(repo);
+    setIsRepoPreviewOpen(true);
+  };
 
-    useEffect(() => {
-        if (theme === "dark") {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
-    }, [theme]);
+  const generateDocumentation = async () => {
+    setIsGeneratingDocs(true);
+    setProgress(0);
+    const steps = [
+      "Reading files...",
+      "Cleaning data...",
+      "Extracting insights...",
+      "Generating documentation...",
+    ];
 
-    // Generate sample activity
-    const generateSampleActivity = (project) => {
-        const now = new Date();
-        return [
-            {
-                id: 1,
-                type: "import",
-                description: "Repository imported",
-                timestamp: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-                user: auth.user?.email || "user@example.com"
-            },
-            {
-                id: 2,
-                type: "deployment",
-                description: "Project deployed",
-                timestamp: new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString(),
-                user: auth.user?.email || "user@example.com"
-            },
-            {
-                id: 3,
-                type: "update",
-                description: `Project renamed to "${project?.name}"`,
-                timestamp: new Date(now.getTime() - 72 * 60 * 60 * 1000).toISOString(),
-                user: auth.user?.email || "user@example.com"
-            }
-        ];
-    };
-
-    // API Calls
-    const getProject = async (projectId) => {
-        const response = await fetch(`${GET_SINGLE_PROJECT_API}${projectId}`, {
-            headers: { Authorization: JWT_TOKEN },
-        });
-        if (!response.ok) throw new Error("Failed to fetch project");
-        return response.json();
-    };
-
-    const renameProject = async (projectId, newName) => {
-        const response = await fetch(`${RENAME_SINGLE_PROJECT_API}${projectId}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: JWT_TOKEN,
-            },
-            body: JSON.stringify({ name: newName }),
-        });
-        if (!response.ok) throw new Error("Failed to rename project");
-        return response.json();
-    };
-
-    const deleteProject = async (projectId) => {
-        const response = await fetch(`${DELETE_SINGLE_PROJECT_API}${projectId}`, {
-            method: "DELETE",
-            headers: { Authorization: JWT_TOKEN },
-        });
-        if (!response.ok) throw new Error("Failed to delete project");
-        return response.json();
-    };
-
-    const importGithubRepo = async (projectId, repoUrl) => {
-        setImportLoading(true);
-        setUploadProgress(0);
-
-        try {
-            const progressInterval = setInterval(() => {
-                setUploadProgress(prev => {
-                    const newProgress = prev + (Math.random() * 10);
-                    return newProgress >= 90 ? 90 : newProgress;
-                });
-            }, 300);
-
-            const response = await fetch(`${IMPORT_GITHUB_REPO_API}${projectId}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: JWT_TOKEN,
-                },
-                body: JSON.stringify({ repo_url: repoUrl }),
-            });
-
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-
-            if (!response.ok) throw new Error("Failed to import repository");
-            const data = await response.json();
-
-            setProject(prev => ({
-                ...prev,
-                repo_count: prev.repo_count + 1
-            }));
-
-            setRecentActivity(prev => [{
-                id: Date.now(),
-                type: "import",
-                description: `Repository imported: ${repoUrl}`,
-                timestamp: new Date().toISOString(),
-                user: auth.user?.email || "user@example.com"
-            }, ...prev]);
-
-            toast({
-                title: "Repository imported",
-                description: `Successfully imported ${repoUrl}`,
-                variant: "success"
-            });
-
-            setTimeout(() => {
-                setShowGithubDialog(false);
-                setUploadProgress(0);
-            }, 1000);
-
-            return data;
-        } catch (err) {
-            setError(err.message);
-            toast({
-                title: "Import failed",
-                description: err.message,
-                variant: "destructive"
-            });
-            throw err;
-        } finally {
-            setImportLoading(false);
-        }
-    };
-
-    const uploadLocalFiles = async (projectId, files) => {
-        setImportLoading(true);
-        setUploadProgress(0);
-
-        try {
-            const formData = new FormData();
-            if (files) {
-                Array.from(files).forEach((file) => {
-                    formData.append('files', file);
-                });
-            }
-
-            const progressInterval = setInterval(() => {
-                setUploadProgress(prev => {
-                    const newProgress = prev + (Math.random() * 10);
-                    return newProgress >= 90 ? 90 : newProgress;
-                });
-            }, 300);
-
-            const response = await fetch(`${UPLOAD_LOCAL_FILES_API}${projectId}`, {
-                method: "POST",
-                headers: {
-                    Authorization: JWT_TOKEN,
-                },
-                body: formData,
-            });
-
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-
-            if (!response.ok) throw new Error("Failed to upload files");
-            const data = await response.json();
-
-            setProject(prev => ({
-                ...prev,
-                file_count: (prev.file_count || 0) + files.length
-            }));
-
-            setRecentActivity(prev => [{
-                id: Date.now(),
-                type: "upload",
-                description: `${files.length} files uploaded`,
-                timestamp: new Date().toISOString(),
-                user: auth.user?.email || "user@example.com"
-            }, ...prev]);
-
-            toast({
-                title: "Files uploaded",
-                description: `Uploaded ${files.length} files`,
-                variant: "success"
-            });
-
-            setTimeout(() => {
-                setShowLocalUploadDialog(false);
-                setUploadProgress(0);
-            }, 1000);
-
-            return data;
-        } catch (err) {
-            setError(err.message);
-            toast({
-                title: "Upload failed",
-                description: err.message,
-                variant: "destructive"
-            });
-            throw err;
-        } finally {
-            setImportLoading(false);
-        }
-    };
-
-    const handleFileChange = (e) => {
-        setFiles(e.target.files);
-    };
-
-    // Initial data fetch
-    useEffect(() => {
-        const fetchProject = async () => {
-            try {
-                const data = await getProject(id);
-                if (!data) throw new Error("Project not found");
-                setProject(data);
-                setRecentActivity(generateSampleActivity(data));
-            } catch (err) {
-                setError(err.message);
-                toast({
-                    title: "Error",
-                    description: err.message,
-                    variant: "destructive"
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchProject();
-    }, [id]);
-
-    // Event Handlers
-    const handleRename = async (e) => {
-        e.preventDefault();
-        if (!newName.trim()) return setError("Project name cannot be empty");
-
-        try {
-            const response = await renameProject(id, newName);
-            setProject((prev) => ({ ...prev, name: response.new_name }));
-            setIsEditing(false);
-            setNewName("");
-
-            setRecentActivity(prev => [{
-                id: Date.now(),
-                type: "update",
-                description: `Project renamed to "${response.new_name}"`,
-                timestamp: new Date().toISOString(),
-                user: auth.user?.email || "user@example.com"
-            }, ...prev]);
-
-            toast({
-                title: "Project renamed",
-                description: `Renamed to "${response.new_name}"`,
-                variant: "success"
-            });
-        } catch (err) {
-            setError("Failed to rename project");
-            toast({
-                title: "Rename failed",
-                description: "Failed to rename project",
-                variant: "destructive"
-            });
-        }
-    };
-
-    const handleDelete = async () => {
-        try {
-            await deleteProject(id);
-            toast({
-                title: "Project deleted",
-                description: "Project deleted successfully",
-                variant: "success"
-            });
-            navigate("/projects");
-        } catch (err) {
-            setError("Failed to delete project");
-            toast({
-                title: "Delete failed",
-                description: "Failed to delete project",
-                variant: "destructive"
-            });
-        }
-    };
-
-    const initiateGithubOAuth = () => {
-        const stateData = {
-            operation: 'repo-import',
-            projectId: id,
-            returnPath: `/projects/${id}`
-        };
-        const state = JSON.stringify(stateData);
-        const redirectUri = "http://localhost:8081/auth/callback/github";
-        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${config.GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&scope=repo&state=${state}`;
-        window.location.href = githubAuthUrl;
-    };
-
-    const handleGithubImport = async (e) => {
-        e.preventDefault();
-        if (!githubRepo.trim()) return;
-
-        try {
-            await importGithubRepo(id, githubRepo);
-            setGithubRepo("");
-        } catch (err) {
-            // Error handling done in importGithubRepo
-        }
-    };
-
-    const handleLocalUpload = async (e) => {
-        e.preventDefault();
-        if (!files || !files.length) return;
-
-        try {
-            await uploadLocalFiles(id, files);
-            setFiles(null);
-        } catch (err) {
-            // Error handling done in uploadLocalFiles
-        }
-    };
-
-    // Start editing project name
-    const startEditing = () => {
-        setNewName(project?.name || "");
-        setIsEditing(true);
-    };
-
-    // Cancel editing
-    const cancelEditing = () => {
-        setIsEditing(false);
-        setNewName("");
-    };
-
-    // If loading
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2 text-lg">Loading project...</span>
-            </div>
-        );
+    for (let i = 0; i < steps.length; i++) {
+      toast.info(steps[i]);
+      setProgress(((i + 1) / steps.length) * 100);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
-    // If error
-    if (error && !project) {
-        return (
-            <div className="container mx-auto p-4">
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-                <Button className="mt-4" onClick={() => navigate("/projects")}>
-                    Back to Projects
-                </Button>
-            </div>
-        );
+    try {
+      const docs = await GENERATE_DOCS_API(selectedRepo, JWT_TOKEN);
+      const timestamp = new Date().toISOString();
+      const updatedHistory = [...(selectedRepo.documentationHistory || []), { content: docs, timestamp }];
+      const updatedRepos = repositories.map((repo) =>
+        repo.id === selectedRepo.id ? { ...repo, documentation: docs, documentationHistory: updatedHistory } : repo
+      );
+      setRepositories(updatedRepos);
+      setDocumentation({ content: docs, repoId: selectedRepo.id });
+      localStorage.setItem(`repos_${projectId}_${user?.id}`, JSON.stringify(updatedRepos));
+      toast.success("Documentation generated successfully");
+    } catch (error) {
+      toast.error("Failed to generate documentation");
+    } finally {
+      setIsGeneratingDocs(false);
+      setProgress(0);
     }
+  };
 
+  const handleInviteCollaborator = (email) => {
+    toast.success(`Invitation sent to ${email} with ${permission} access`);
+    setCollaborators((prev) => prev + 1);
+    setIsInviteModalOpen(false);
+    setPermission("read"); // Reset to default
+  };
+
+  const getUserInitials = () => {
+    if (!user?.name) return "U";
+    const parts = user.name.trim().split(" ");
+    return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() : parts[0].substring(0, 2).toUpperCase();
+  };
+
+  if (!project) {
     return (
-        <div className="container mx-auto p-4">
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center">
-                    {isEditing ? (
-                        <form onSubmit={handleRename} className="flex items-center">
-                            <Input
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                className="mr-2"
-                                placeholder="Project name"
-                                autoFocus
-                            />
-                            <Button type="submit" size="icon" variant="ghost">
-                                <Check className="h-4 w-4" />
-                            </Button>
-                            <Button onClick={cancelEditing} size="icon" variant="ghost">
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </form>
-                    ) : (
-                        <>
-                            <h1 className="text-2xl font-bold mr-2">{project?.name}</h1>
-                            <Button onClick={startEditing} size="icon" variant="ghost">
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                        </>
-                    )}
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={toggleTheme}
-                        title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-                    >
-                        {theme === "light" ? (
-                            <Moon className="h-4 w-4" />
-                        ) : (
-                            <Sun className="h-4 w-4" />
-                        )}
-                    </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Project Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setShowGithubDialog(true)}>
-                                <Github className="mr-2 h-4 w-4" />
-                                Import from GitHub
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowLocalUploadDialog(true)}>
-                                <Upload className="mr-2 h-4 w-4" />
-                                Upload Files
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/projects/${id}/files`)}>
-                                <FolderOpen className="mr-2 h-4 w-4" />
-                                Browse Files
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Project
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
-
-            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-                <TabsList className="mb-4">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="activity">Activity</TabsTrigger>
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card className="col-span-2">
-                            <CardHeader>
-                                <CardTitle>Project Details</CardTitle>
-                                <CardDescription>
-                                    Created on {formatDate(project?.created_at)}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-sm font-medium">Description</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {project?.description || "No description provided"}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium">Status</p>
-                                        <div className="flex items-center mt-1">
-                                            <Badge variant={project?.status === "active" ? "default" : "secondary"}>
-                                                {project?.status || "Not set"}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                    {project?.github_connected && (
-                                        <div>
-                                            <p className="text-sm font-medium">Connected GitHub Account</p>
-                                            <div className="flex items-center mt-1">
-                                                <Github className="h-4 w-4 mr-2" />
-                                                <span>{project?.github_username}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                            <CardFooter>
-                                <div className="flex space-x-2">
-                                    <Button variant="outline" onClick={() => setShowGithubDialog(true)}>
-                                        <Github className="mr-2 h-4 w-4" />
-                                        Import Repository
-                                    </Button>
-                                    <Button variant="outline" onClick={() => setShowLocalUploadDialog(true)}>
-                                        <Upload className="mr-2 h-4 w-4" />
-                                        Upload Files
-                                    </Button>
-                                </div>
-                            </CardFooter>
-                        </Card>
-
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Stats</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <p className="text-sm font-medium">Files</p>
-                                            <p className="text-2xl font-bold">{project?.file_count || 0}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">Repositories</p>
-                                            <p className="text-2xl font-bold">{project?.repo_count || 0}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">Last Updated</p>
-                                            <p className="text-sm">
-                                                {project?.updated_at ? formatDate(project.updated_at) : "N/A"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Quick Actions</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/projects/${id}/files`)}>
-                                            <FolderOpen className="mr-2 h-4 w-4" />
-                                            Browse Files
-                                        </Button>
-                                        <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/projects/${id}/new-file`)}>
-                                            <FilePlus2 className="mr-2 h-4 w-4" />
-                                            New File
-                                        </Button>
-                                        <Button variant="outline" className="w-full justify-start" onClick={() => navigate(`/projects/${id}/terminal`)}>
-                                            <Terminal className="mr-2 h-4 w-4" />
-                                            Terminal
-                                        </Button>
-                                        {project?.deployed_url && (
-                                            <Button variant="outline" className="w-full justify-start" onClick={() => window.open(project.deployed_url, "_blank")}>
-                                                <ExternalLink className="mr-2 h-4 w-4" />
-                                                Open Deployed Site
-                                            </Button>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="activity">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>Recent actions performed on this project</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-[400px]">
-                                <div className="space-y-4">
-                                    {recentActivity.map((activity) => (
-                                        <div key={activity.id} className="flex items-start pb-4 border-b last:border-0">
-                                            <div className="mr-4 p-2 bg-muted rounded-full">
-                                                {activity.type === "import" && <Github className="h-4 w-4" />}
-                                                {activity.type === "update" && <Pencil className="h-4 w-4" />}
-                                                {activity.type === "deployment" && <Zap className="h-4 w-4" />}
-                                                {activity.type === "connection" && <Link className="h-4 w-4" />}
-                                                {activity.type === "upload" && <Upload className="h-4 w-4" />}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm">{activity.description}</p>
-                                                <div className="flex items-center mt-1 text-xs text-muted-foreground">
-                                                    <Calendar className="h-3 w-3 mr-1" />
-                                                    {formatDate(activity.timestamp)}
-                                                    <span className="mx-1">•</span>
-                                                    {activity.user}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                <TabsContent value="settings">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>General Settings</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form className="space-y-4">
-                                    <div>
-                                        <label className="text-sm font-medium">Project Name</label>
-                                        <Input
-                                            value={newName || project?.name}
-                                            onChange={(e) => setNewName(e.target.value)}
-                                            className="mt-1"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium">Description</label>
-                                        <Input
-                                            value={project?.description || ""}
-                                            className="mt-1"
-                                            placeholder="No description"
-                                        />
-                                    </div>
-                                    <Button type="submit" onClick={handleRename}>Save Changes</Button>
-                                </form>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        These actions are destructive and cannot be undone.
-                                    </p>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={() => setShowDeleteDialog(true)}
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete Project
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </TabsContent>
-            </Tabs>
-
-            {/* GitHub Import Dialog */}
-            <Dialog open={showGithubDialog} onOpenChange={setShowGithubDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Import from GitHub</DialogTitle>
-                        <DialogDescription>
-                            Connect your GitHub account or import a repository directly
-                        </DialogDescription>
-                    </DialogHeader>
-                    {importLoading ? (
-                        <div className="space-y-4 py-4">
-                            <div className="flex items-center space-x-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <p>Importing repository...</p>
-                            </div>
-                            <Progress value={uploadProgress} />
-                        </div>
-                    ) : (
-                        <>
-                            <form onSubmit={handleGithubImport} className="space-y-4 py-4">
-                                <div>
-                                    <label className="text-sm font-medium">Repository URL</label>
-                                    <Input
-                                        value={githubRepo}
-                                        onChange={(e) => setGithubRepo(e.target.value)}
-                                        placeholder="https://github.com/username/repo"
-                                        className="mt-1"
-                                    />
-                                </div>
-                                <Button type="submit" disabled={!githubRepo.trim()}>
-                                    Import Repository
-                                </Button>
-                            </form>
-                            <Separator className="my-4" />
-                            <div className="flex flex-col items-center py-4">
-                                <p className="text-sm text-center mb-4">
-                                    Connect your GitHub account to import private repositories
-                                </p>
-                                <Button variant="outline" onClick={initiateGithubOAuth}>
-                                    <Github className="mr-2 h-4 w-4" />
-                                    Connect GitHub Account
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Local Upload Dialog */}
-            <Dialog open={showLocalUploadDialog} onOpenChange={setShowLocalUploadDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Upload Local Files</DialogTitle>
-                        <DialogDescription>
-                            Select files from your local machine to upload to this project
-                        </DialogDescription>
-                    </DialogHeader>
-                    {importLoading ? (
-                        <div className="space-y-4 py-4">
-                            <div className="flex items-center space-x-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <p>Uploading files...</p>
-                            </div>
-                            <Progress value={uploadProgress} />
-                        </div>
-                    ) : (
-                        <form onSubmit={handleLocalUpload} className="space-y-4 py-4">
-                            <div>
-                                <label className="text-sm font-medium">Select Files</label>
-                                <Input
-                                    type="file"
-                                    onChange={handleFileChange}
-                                    className="mt-1"
-                                    multiple
-                                />
-                            </div>
-                            <Button type="submit" disabled={!files || !files.length}>
-                                Upload Files
-                            </Button>
-                        </form>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Confirm Delete</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete this project? This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <p className="text-sm text-muted-foreground">
-                            All files, repositories, and data associated with this project will be permanently deleted.
-                        </p>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={handleDelete}>
-                            Delete Project
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-gray-900 text-white">
+        <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-lg font-semibold">
+          Loading project...
+        </motion.div>
+      </div>
     );
-}
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
+      <motion.div
+        animate={{ width: isSidebarCollapsed ? 80 : 250 }}
+        transition={{ type: "spring", stiffness: 250, damping: 20 }}
+        className="h-full bg-gray-950 border-r border-gray-800"
+      >
+        <Sidebar
+          isSidebarCollapsed={isSidebarCollapsed}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          user={user ? { ...user, avatarUrl: user.avatarUrl || "" } : null}
+          logout={logout}
+        />
+      </motion.div>
+
+      <div className="flex-1 flex flex-col">
+        <motion.header
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="border-b border-gray-800 p-4 flex items-center justify-between bg-gray-850"
+        >
+          <div className="flex items-center space-x-3">
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-gray-400 hover:text-white hover:bg-gray-700">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </motion.div>
+            <h1 className="text-xl font-semibold text-white">{project.name}</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center text-sm text-gray-400">
+              <Users className="h-5 w-5 mr-2 text-blue-500" />
+              <span>{collaborators} Collaborators</span>
+            </div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                onClick={() => setIsInviteModalOpen(true)}
+                className="border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                Invite Collaborator
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={() => setIsImportModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Import Repository
+              </Button>
+            </motion.div>
+          </div>
+        </motion.header>
+
+        <main className="p-6 flex-1 overflow-y-auto bg-gray-900">
+          <AnimatePresence mode="wait">
+            {repositories.length === 0 ? (
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+                <EmptyState onImportRepo={() => setIsImportModalOpen(true)} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="repos"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+              >
+                {repositories.map((repo, index) => (
+                  <motion.div
+                    key={repo.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    whileHover={{ scale: 1.02, boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)" }}
+                    onClick={() => handleRepoClick(repo)}
+                    className="bg-gray-850 border border-gray-800 rounded-md p-4 cursor-pointer hover:bg-gray-800 transition-all"
+                  >
+                    <h3 className="text-base font-medium text-white truncate">{repo.name}</h3>
+                    <p className="text-xs text-gray-400 mt-1">{repo.source}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">{repo.files.length} files</p>
+                      {repo.documentation && (
+                        <span className="text-xs text-blue-500">Docs Available</span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* VS Code-style Repository Preview Popup */}
+      <Dialog open={isRepoPreviewOpen} onOpenChange={setIsRepoPreviewOpen}>
+        <DialogContent className="max-w-4xl bg-gray-900 text-gray-100 border border-gray-800 rounded-lg p-0">
+          <div className="flex flex-col h-[60vh]">
+            <div className="flex items-center justify-between p-2 bg-gray-850 border-b border-gray-800">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                <div className="w-3 h-3 rounded-full bg-green-500" />
+              </div>
+              <span className="text-sm font-medium text-gray-100">Preview of {selectedRepo?.name} - VS Code</span>
+              <Button variant="ghost" size="sm" onClick={() => setIsRepoPreviewOpen(false)} className="text-gray-400 hover:text-white hover:bg-gray-700">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 p-4 overflow-y-auto">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-2">
+                {selectedRepo?.files.map((file, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                    className="flex items-center gap-2 p-2 bg-gray-850 rounded-md border border-gray-800"
+                  >
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-300">{file}</span>
+                  </motion.div>
+                ))}
+              </motion.div>
+              {selectedRepo?.documentationHistory?.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-100 mb-2">Documentation History</h3>
+                  {selectedRepo.documentationHistory.map((doc, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                      className="p-2 bg-gray-850 rounded-md border border-gray-800 mb-2 cursor-pointer hover:bg-gray-800"
+                      onClick={() => setDocumentation({ content: doc.content, repoId: selectedRepo.id })}
+                    >
+                      <p className="text-xs text-gray-400">Generated on: {new Date(doc.timestamp).toLocaleString()}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-800">
+              {isGeneratingDocs ? (
+                <div className="space-y-2">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 1, ease: "easeInOut" }}
+                    className="h-2 bg-blue-500 rounded-full"
+                  />
+                  <p className="text-sm text-gray-400 text-center">Generating...</p>
+                </div>
+              ) : (
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button onClick={generateDocumentation} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <FileText className="mr-2 h-4 w-4" />
+                    {selectedRepo?.documentation ? "Regenerate Documentation" : "Generate Documentation"}
+                  </Button>
+                </motion.div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Collaborator Modal with Permissions */}
+      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+        <DialogContent className="bg-gray-850 text-gray-100 border border-gray-800 rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-white">Invite a Collaborator</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleInviteCollaborator(e.target.email.value);
+              e.target.reset();
+            }}
+          >
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
+              <div>
+                <Label htmlFor="email" className="text-gray-100 font-medium">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="Enter email"
+                  className="w-full p-2 mt-1 bg-gray-900 border border-gray-700 rounded-md text-gray-100 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="permission" className="text-gray-100 font-medium">Permission</Label>
+                <Select value={permission} onValueChange={setPermission}>
+                  <SelectTrigger className="w-full mt-1 bg-gray-900 border-gray-700 text-gray-100">
+                    <SelectValue placeholder="Select permission" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 text-gray-100 border-gray-700">
+                    <SelectItem value="read">Read</SelectItem>
+                    <SelectItem value="edit">Edit</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="mt-4">
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                Send Invite
+              </Button>
+            </motion.div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ImportRepoModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={handleImportSubmit} projectId={projectId} />
+      {documentation && (
+        <MdPreview
+          isOpen={!!documentation}
+          onClose={() => setDocumentation(null)}
+          content={documentation.content}
+          onDownload={() => {
+            const blob = new Blob([documentation.content], { type: "text/markdown" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${selectedRepo.name}_docs.md`;
+            a.click();
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ProjectRepositories;

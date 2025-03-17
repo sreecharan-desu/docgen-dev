@@ -25,25 +25,23 @@ html {
   border-color: transparent;
 }
 
-
-
 /* Enhanced Theme Colors */
 @layer base {
   :root {
     /* Core colors */
-    --background: 222 47% 11%;
-    --foreground: 213 31% 91%;
+    --background: 222 47% 11%; /* Dark background */
+    --foreground: 213 31% 91%; /* Light text */
     
-    /* Updated primary color with better contrast */
-    --primary: 142 71% 45%;
+    /* Primary color (neon green from DocGen) */
+    --primary: 142 76% 36%; /* #00FF99 */
     --primary-foreground: 210 40% 98%;
     
-    /* Enhanced secondary colors */
-    --secondary: 222 47% 21%;
+    /* Secondary colors */
+    --secondary: 222 47% 21%; /* Slightly lighter dark */
     --secondary-foreground: 210 40% 98%;
     
     /* Card & UI element colors */
-    --card: 222 47% 13%;
+    --card: 222 47% 13%; /* Dark card background */
     --card-foreground: 213 31% 91%;
     --popover: 222 47% 11%;
     --popover-foreground: 213 31% 91%;
@@ -57,7 +55,7 @@ html {
     /* Semantic colors */
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --success: 142 71% 45%;
+    --success: 142 76% 36%; /* Match primary */
     --success-foreground: 210 40% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 210 40% 98%;
@@ -67,10 +65,10 @@ html {
     /* Border & input colors */
     --border: 213 27% 20%;
     --input: 213 27% 20%;
-    --ring: 142 71% 45%;
+    --ring: 142 76% 36%; /* Neon green ring */
     
     /* Adjustable radius */
-    --radius: 0.75rem;
+    --radius: 0.5rem; /* Slightly rounded corners */
     
     /* Header height for offset calculations */
     --header-height: 4rem;
@@ -103,26 +101,24 @@ html {
 
 /* Enhanced Component Styles */
 @layer components {
-  /* Improved glass card with subtle gradient */
+  /* Clean card with subtle elevation */
   .glass-card {
-    @apply bg-black/20 backdrop-blur-lg border border-white/10 shadow-lg relative overflow-hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    @apply bg-card border border-border shadow-sm rounded-lg p-4 relative overflow-hidden;
+    transition: box-shadow 0.3s ease;
   }
   
-  .glass-card::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none opacity-70;
+  .glass-card:hover {
+    @apply shadow-md;
   }
   
-  /* Improved terminal styling */
+  /* Terminal styling */
   .terminal {
-    @apply font-mono bg-[#1A1A1A] rounded-lg p-4 text-white relative overflow-hidden border border-white/5;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    @apply font-mono bg-[#1A1A1A] rounded-lg p-4 text-white border border-border shadow-sm;
   }
   
   .terminal::before {
     content: '';
-    @apply absolute top-0 left-0 right-0 h-6 bg-[#2A2A2A] flex items-center px-4;
+    @apply absolute top-0 left-0 right-0 h-6 bg-secondary flex items-center px-4;
   }
   
   .terminal::after {
@@ -133,8 +129,7 @@ html {
   
   /* Code block styling */
   .code-block {
-    @apply font-mono rounded-lg p-4 text-white overflow-auto;
-    background-color: #1E1E1E;
+    @apply font-mono rounded-lg p-4 text-white bg-[#1E1E1E] border border-border overflow-auto;
   }
   
   /* Layout containers */
@@ -148,96 +143,23 @@ html {
   
   /* Card variations */
   .feature-card {
-    @apply glass-card p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg;
-  }
-  
-  .feature-card:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    @apply glass-card p-6 transition-all duration-300 hover:shadow-md;
   }
   
   /* Button variations */
-  .btn-glow {
-    @apply relative overflow-hidden transition-all duration-300;
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 transition-colors;
   }
   
-  .btn-glow::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-primary/50 to-transparent opacity-0 transition-opacity duration-300;
-  }
-  
-  .btn-glow:hover::before {
-    @apply opacity-100;
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md px-4 py-2 transition-colors;
   }
 }
 
-/* Enhanced Animations */
-@keyframes typing {
-  from { width: 0 }
-  to { width: 100% }
-}
-
-@keyframes blink {
-  50% { border-color: transparent }
-}
-
-@keyframes text {
-  0%, 100% {
-    background-size: 200% 200%;
-    background-position: left center;
-  }
-  50% {
-    background-size: 200% 200%;
-    background-position: right center;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
+/* Custom utilities */
 @layer utilities {
-  /* Improved typing animation */
-  .typing-demo {
-    @apply font-mono overflow-hidden whitespace-nowrap inline-block;
-    border-right: 3px solid;
-    animation: typing 2.5s steps(40, end), blink 0.7s step-end infinite alternate;
-  }
-  
-  /* Text gradient animation */
-  .animate-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r;
-    animation: text 8s ease infinite;
-  }
-  
-  .animate-text-fast {
-    @apply bg-clip-text text-transparent bg-gradient-to-r;
-    animation: text 4s ease infinite;
-  }
-  
-  /* Shimmer effect */
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.05) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-  }
-  
-  /* Custom gradient text */
-  .text-gradient-primary {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400;
-  }
-  
-  .text-gradient-cool {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400;
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1;
   }
   
   /* Improved scrollbar for code blocks */
@@ -282,20 +204,6 @@ html {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
-  /* Hover effects */
-  .hover-lift {
-    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
-  }
-  
-  /* Improved gradient backgrounds */
-  .bg-gradient-subtle {
-    @apply bg-gradient-to-br from-background to-secondary/50;
-  }
-  
-  .bg-gradient-primary {
-    @apply bg-gradient-to-br from-primary/20 via-primary/10 to-transparent;
-  }
 }
 
 /* Code syntax highlighting */
@@ -310,10 +218,6 @@ pre code {
   .glass-card {
     @apply rounded-lg p-4;
   }
-  
-  .typing-demo {
-    width: 16ch;
-  }
 }
 
 /* Print styles */
@@ -325,4 +229,17 @@ pre code {
   .no-print {
     display: none;
   }
+}
+
+/* Custom CSS for neon effects */
+.text-shadow-neon {
+  text-shadow: 0 0 5px #00FF99, 0 0 10px #00FF99, 0 0 15px #00FFFF;
+}
+
+.neon-green {
+  color: #00FF99;
+}
+
+.neon-cyan {
+  color: #00FFFF;
 }

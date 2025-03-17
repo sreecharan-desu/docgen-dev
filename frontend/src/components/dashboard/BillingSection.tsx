@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence, useInView } from "framer-motion";
-import { CheckCircle2, HelpCircle, CreditCard, ChevronDown, Sparkles, Shield, Clock, Zap } from "lucide-react";
+import {
+  CheckCircle2,
+  HelpCircle,
+  CreditCard,
+  ChevronDown,
+  Sparkles,
+  Shield,
+  Clock,
+  Zap,
+} from "lucide-react";
 
 const BillingSection = () => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -26,13 +35,21 @@ const BillingSection = () => {
         "10,000 requests/month",
         "Free support",
         "7-day log retention",
-        "","","","",
-        "","","","",
-        "","",""
-
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
       ],
       buttonText: "Get Started",
-      buttonStyle: "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/60"
+      buttonStyle:
+        "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/60",
     },
     {
       id: "pro",
@@ -50,10 +67,10 @@ const BillingSection = () => {
         "Priority support",
         "30-day log retention",
         "Advanced analytics",
-        "Custom rate limits"
+        "Custom rate limits",
       ],
       buttonText: "Upgrade Now",
-      buttonStyle: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+      buttonStyle: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white",
     },
     {
       id: "enterprise",
@@ -71,31 +88,36 @@ const BillingSection = () => {
         "90-day log retention",
         "Custom integrations",
         "Dedicated account manager",
-        "On-premise deployment options"
+        "On-premise deployment options",
       ],
       buttonText: "Contact Sales",
-      buttonStyle: "bg-violet-50 text-violet-600 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-800/60"
-    }
+      buttonStyle:
+        "bg-violet-50 text-violet-600 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-800/60",
+    },
   ];
 
   // FAQ data with improved answers
   const faqs = [
     {
       question: "How do I upgrade or downgrade my plan?",
-      answer: "You can change your plan anytime from your account settings. Changes take effect immediately, and we'll prorate your billing automatically. No technical interruptions to your service."
+      answer:
+        "You can change your plan anytime from your account settings. Changes take effect immediately, and we'll prorate your billing automatically. No technical interruptions to your service.",
     },
     {
       question: "What happens if I exceed my monthly limit?",
-      answer: "Your service continues uninterrupted. We'll notify you and offer options to upgrade or add capacity. Your critical operations will never be cut off mid-month."
+      answer:
+        "Your service continues uninterrupted. We'll notify you and offer options to upgrade or add capacity. Your critical operations will never be cut off mid-month.",
     },
     {
       question: "Do you offer a free trial?",
-      answer: "Yes! All plans include a 14-day full-feature trial with no credit card required. Start building immediately and decide later which plan suits your needs."
+      answer:
+        "Yes! All plans include a 14-day full-feature trial with no credit card required. Start building immediately and decide later which plan suits your needs.",
     },
     {
       question: "Is there a setup fee?",
-      answer: "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and Free support."
-    }
+      answer:
+        "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and Free support.",
+    },
   ];
 
   const toggleFaq = (index: number) => {
@@ -109,9 +131,9 @@ const BillingSection = () => {
       opacity: 1,
       transition: {
         staggerChildren: 0.15,
-        delayChildren: 0.1
-      }
-    }
+        delayChildren: 0.1,
+      },
+    },
   };
 
   const itemVariants = {
@@ -119,8 +141,8 @@ const BillingSection = () => {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { type: "spring", stiffness: 300, damping: 24 }
-    }
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
   };
 
   const planVariants = {
@@ -128,13 +150,13 @@ const BillingSection = () => {
     hover: {
       scale: 1.02,
       y: -5,
-      transition: { type: "spring", stiffness: 400, damping: 20 }
+      transition: { type: "spring", stiffness: 400, damping: 20 },
     },
     selected: {
       scale: 1.03,
       y: -8,
-      transition: { type: "spring", stiffness: 400, damping: 20 }
-    }
+      transition: { type: "spring", stiffness: 400, damping: 20 },
+    },
   };
 
   const staggerFeatures = {
@@ -142,9 +164,9 @@ const BillingSection = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08
-      }
-    }
+        staggerChildren: 0.08,
+      },
+    },
   };
 
   const featureItem = {
@@ -152,8 +174,8 @@ const BillingSection = () => {
     visible: {
       opacity: 1,
       x: 0,
-      transition: { type: "spring", stiffness: 100, damping: 10 }
-    }
+      transition: { type: "spring", stiffness: 100, damping: 10 },
+    },
   };
 
   // Determine if a plan is selected
@@ -194,7 +216,7 @@ const BillingSection = () => {
               className={`absolute w-1 h-1 rounded-full bg-emerald-400`}
               style={{
                 left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`
+                top: `${Math.random() * 100}%`,
               }}
               animate={{
                 y: [0, -10, 0],
@@ -252,7 +274,8 @@ const BillingSection = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.7 }}
         >
-          Choose the perfect plan for your needs and scale seamlessly as you grow your business with our enterprise-grade API platform
+          Choose the perfect plan for your needs and scale seamlessly as you
+          grow your business with our enterprise-grade API platform
         </motion.p>
 
         {/* Billing toggle with enhanced styling */}
@@ -282,13 +305,28 @@ const BillingSection = () => {
           transition={{ delay: 1, duration: 1 }}
           className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-sm text-slate-400"
         >
-          <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <svg
+            className="h-4 w-4 text-amber-400"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
-          <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <svg
+            className="h-4 w-4 text-amber-400"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
-          <svg className="h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <svg
+            className="h-4 w-4 text-amber-400"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.248 3.84a1 1 0 00.95.69h4.038c.969 0 1.372 1.24.588 1.81l-3.262 2.37a1 1 0 00-.364 1.118l1.248 3.84c.3.92-.755 1.687-1.54 1.118l-3.262-2.37a1 1 0 00-1.176 0l-3.262 2.37c-.785.57-1.84-.198-1.54-1.118l1.248-3.84a1 1 0 00-.364-1.118L2.225 9.267c-.785-.57-.38-1.81.588-1.81h4.038a1 1 0 00.95-.69l1.248-3.84z" />
           </svg>
         </motion.div>
@@ -297,7 +335,11 @@ const BillingSection = () => {
       <br />
 
       {/* Pricing Plans */}
-      <motion.div ref={plansRef} className="grid md:grid-cols-3 gap-6" variants={containerVariants}>
+      <motion.div
+        ref={plansRef}
+        className="grid md:grid-cols-3 gap-6"
+        variants={containerVariants}
+      >
         {plans.map((plan, index) => {
           const isPopular = plan.popular;
           return (
@@ -326,33 +368,67 @@ const BillingSection = () => {
               <p className="text-slate-200 mb-4">{plan.description}</p>
 
               <div className="text-white text-4xl font-bold">{plan.price}</div>
-              <div className="text-slate-400 text-sm">{plan.period === "monthly" ? "/month" : "Custom pricing available"}</div>
-              {plan.savings && <div className="text-emerald-300 text-xs mt-1">{plan.savings}</div>}
+              <div className="text-slate-400 text-sm">
+                {plan.period === "monthly"
+                  ? "/month"
+                  : "Custom pricing available"}
+              </div>
+              {plan.savings && (
+                <div className="text-emerald-300 text-xs mt-1">
+                  {plan.savings}
+                </div>
+              )}
 
               <ul className="mt-6 space-y-2">
                 {plan.features.map((feature, i) => (
-                  <motion.li key={i} variants={featureItem} className="flex items-center gap-2 text-white">
-                    {feature != "" ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <></>}
+                  <motion.li
+                    key={i}
+                    variants={featureItem}
+                    className="flex items-center gap-2 text-white"
+                  >
+                    {feature != "" ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    ) : (
+                      <></>
+                    )}
                     {feature}
                   </motion.li>
                 ))}
               </ul>
 
-              <Button className={`mt-6 w-full py-3 rounded-lg ${plan.buttonStyle}`}>{plan.buttonText}</Button>
+              <Button
+                className={`mt-6 w-full py-3 rounded-lg ${plan.buttonStyle}`}
+              >
+                {plan.buttonText}
+              </Button>
             </motion.div>
           );
         })}
       </motion.div>
 
       {/* FAQ Section */}
-      <motion.div className="mt-16 max-w-3xl mx-auto" variants={containerVariants}>
-        <h2 className="text-3xl font-bold text-white text-center mb-6">Frequently Asked Questions</h2>
+      <motion.div
+        className="mt-16 max-w-3xl mx-auto"
+        variants={containerVariants}
+      >
+        <h2 className="text-3xl font-bold text-white text-center mb-6">
+          Frequently Asked Questions
+        </h2>
         <div className="space-y-4">
           {faqs.map((faq, index) => (
-            <motion.div key={index} variants={itemVariants} className="border border-slate-700 p-4 rounded-lg bg-slate-800/40">
-              <button className="flex justify-between items-center w-full text-white text-lg font-medium" onClick={() => toggleFaq(index)}>
+            <motion.div
+              key={index}
+              variants={itemVariants}
+              className="border border-slate-700 p-4 rounded-lg bg-slate-800/40"
+            >
+              <button
+                className="flex justify-between items-center w-full text-white text-lg font-medium"
+                onClick={() => toggleFaq(index)}
+              >
                 {faq.question}
-                <ChevronDown className={`w-5 h-5 transition-transform ${expandedFaq === index ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`w-5 h-5 transition-transform ${expandedFaq === index ? "rotate-180" : ""}`}
+                />
               </button>
               <AnimatePresence>
                 {expandedFaq === index && (

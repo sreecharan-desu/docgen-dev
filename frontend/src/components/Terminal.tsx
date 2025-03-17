@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface TerminalProps {
   commands: string[];
@@ -7,7 +7,7 @@ interface TerminalProps {
 
 export const Terminal = ({ commands, loop = true }: TerminalProps) => {
   const [currentCommand, setCurrentCommand] = useState(0);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
@@ -21,9 +21,12 @@ export const Terminal = ({ commands, loop = true }: TerminalProps) => {
       } else {
         clearInterval(typingInterval);
         setTimeout(() => {
-          setCurrentCommand((prev) => 
-            loop ? (prev + 1) % commands.length : 
-            prev < commands.length - 1 ? prev + 1 : prev
+          setCurrentCommand((prev) =>
+            loop
+              ? (prev + 1) % commands.length
+              : prev < commands.length - 1
+                ? prev + 1
+                : prev,
           );
         }, 2000);
       }

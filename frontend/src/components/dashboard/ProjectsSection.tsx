@@ -1,10 +1,22 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Plus, FolderKanban, AlertCircle, Clock, Users, GitBranch, ArrowUpRight } from "lucide-react";
+import {
+  Plus,
+  FolderKanban,
+  AlertCircle,
+  Clock,
+  Users,
+  GitBranch,
+  ArrowUpRight,
+  Search,
+  Filter,
+} from "lucide-react";
 import { CREATE_PROJECT_API } from "@/utils/apis";
 import { useNavigate } from "react-router-dom";
 import { projectAtom } from "@/store/store";
 import { useSetRecoilState } from "recoil";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDebounce } from "use-debounce";
+import { DialogHeader } from "@/components/ui/dialog";
 
 // Lazy loading UI components
 const components = {
@@ -41,7 +53,6 @@ const {
   CardFooter,
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogFooter,
   DialogClose,
@@ -60,6 +71,10 @@ const ProjectsSection = () => {
   const [projects, setProjects] = useState([]);
   const [fetchingProjects, setFetchingProjects] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const user = useAuth();
   const navigateTo = useNavigate();
@@ -70,18 +85,20 @@ const ProjectsSection = () => {
     fetchProjects();
   }, []);
 
-  // Function to fetch projects
   const fetchProjects = async () => {
     setFetchingProjects(true);
     setFetchError("");
 
     try {
-      const response = await fetch("https://api2.docgen.dev/api/v1/project/list-projects", {
-        method : 'GET',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
+      const response = await fetch(
+        "https://api2.docgen.dev/api/v1/project/list-projects",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch projects");
@@ -96,7 +113,6 @@ const ProjectsSection = () => {
     }
   };
 
-  // Project creation handler
   const handleCreateProject = async () => {
     if (!projectName.trim() || !projectDescription.trim()) {
       setError("Project name and description cannot be empty");
@@ -110,7 +126,7 @@ const ProjectsSection = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
           name: projectName,
@@ -121,7 +137,8 @@ const ProjectsSection = () => {
 
       const data = await response.json();
 
-      if (!response.ok) throw new Error(data.message || "Failed to create project");
+      if (!response.ok)
+        throw new Error(data.message || "Failed to create project");
 
       setProject(data);
       navigateTo(`/project/${data.id}`);
@@ -136,38 +153,79 @@ const ProjectsSection = () => {
     }
   };
 
-  // Format date for display
   const formatDate = (timestamp) => {
     if (!timestamp) return "N/A";
     const date = new Date(Number(timestamp));
-    return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-US", {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    return isNaN(date.getTime())
+      ? "N/A"
+      : date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
   };
 
-  // Navigate to project details
   const goToProject = (projectId) => {
-    const selectedProject = projects.find(p => p.id === projectId);
+    const selectedProject = projects.find((p) => p.id === projectId);
     if (selectedProject) {
       setProject(selectedProject);
       navigateTo(`/project/${projectId}`);
     }
   };
 
+  // Filter projects based on search and status
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      project.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+    
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && project.is_active !== false) ||
+      (statusFilter === "inactive" && project.is_active === false);
+
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <div className="space-y-6 p-10">
-        <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Projects</h1>
-            <p className="text-muted-foreground">Manage your DocGen projects</p>
+        <header className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Projects</h1>
+              <p className="text-muted-foreground">Manage your DocGen projects</p>
+            </div>
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Project
+            </Button>
           </div>
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Project
-          </Button>
+
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border border-border rounded-md px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All Projects</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
         </header>
 
         {/* Error Alert */}
@@ -182,46 +240,56 @@ const ProjectsSection = () => {
         <Suspense fallback={<ProjectsGridSkeleton />}>
           {fetchingProjects ? (
             <ProjectsGridSkeleton />
-          ) : projects.length > 0 ? (
+          ) : filteredProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
+              {filteredProjects.map((project) => (
                 <Card
                   key={project.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                  className="overflow-hidden shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] cursor-pointer border border-border bg-background rounded-2xl"
                   onClick={() => goToProject(project.id)}
                 >
-                  <div className="h-1 bg-primary"></div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex justify-between items-center">
+                  {/* <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div> */}
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex justify-between items-center text-lg font-semibold text-foreground">
                       <span className="truncate">{project.name}</span>
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                      <ArrowUpRight className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1" />
                     </CardTitle>
-                    <CardDescription className="truncate">{project.description}</CardDescription>
+                    <CardDescription className="truncate text-muted-foreground text-sm">
+                      {project.description}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="pb-2">
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <Clock className="h-4 w-4 mr-1" />
+                  <CardContent className="pb-3 space-y-2">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4 mr-1 text-primary" />
                       <div>Created: {formatDate(project.created_at)}</div>
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 mr-1" />
+                      <Clock className="h-4 w-4 mr-1 text-primary" />
                       <div>Updated: {formatDate(project.updated_at) || "Never"}</div>
                     </div>
                   </CardContent>
-                  <CardFooter className="pt-0">
-                    <div className="flex justify-between w-full">
-                      <div className="flex items-center">
-                        <GitBranch className="h-4 w-4 mr-1" />
-                        <Badge variant="outline">{project.repo_count} repos</Badge>
+                  <CardFooter className="pt-2 border-t border-border bg-muted/40 rounded-b-2xl">
+                    <div className="flex justify-between w-full text-sm">
+                      <div className="flex items-center gap-1">
+                        <GitBranch className="h-4 w-4 text-primary" />
+                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                          {project.repo_count} repos
+                        </Badge>
                       </div>
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1" />
-                        <Badge variant="outline">{project.collaborator_count} collaborators</Badge>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-primary" />
+                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                          {project.collaborator_count} collaborators
+                        </Badge>
                       </div>
                     </div>
                   </CardFooter>
                 </Card>
               ))}
+            </div>
+          ) : projects.length > 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No projects match your search criteria
             </div>
           ) : (
             <EmptyProjectState setOpen={setOpen} />
@@ -236,8 +304,16 @@ const ProjectsSection = () => {
                 <DialogTitle>Create New Project</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <InputField label="Name" value={projectName} setValue={setProjectName} />
-                <InputField label="Description" value={projectDescription} setValue={setProjectDescription} />
+                <InputField
+                  label="Name"
+                  value={projectName}
+                  setValue={setProjectName}
+                />
+                <InputField
+                  label="Description"
+                  value={projectDescription}
+                  setValue={setProjectDescription}
+                />
                 {error && (
                   <Alert variant="destructive" className="mt-2">
                     <AlertCircle className="h-4 w-4" />
@@ -251,7 +327,11 @@ const ProjectsSection = () => {
                     Cancel
                   </Button>
                 </DialogClose>
-                <Button type="button" onClick={handleCreateProject} disabled={isLoading}>
+                <Button
+                  type="button"
+                  onClick={handleCreateProject}
+                  disabled={isLoading}
+                >
                   {isLoading ? "Creating..." : "Create"}
                 </Button>
               </DialogFooter>
@@ -263,23 +343,27 @@ const ProjectsSection = () => {
   );
 };
 
-export default ProjectsSection;
-
-// 🛠️ Reusable Input Field Component
+// Reusable Input Field Component
 const InputField = ({ label, value, setValue }) => (
   <div className="grid grid-cols-4 items-center gap-4">
     <Label className="text-right">{label}</Label>
-    <Input value={value} onChange={(e) => setValue(e.target.value)} className="col-span-3" />
+    <Input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      className="col-span-3"
+    />
   </div>
 );
 
-// 🔄 Loading Spinner
-const LoadingSpinner = () => <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto"></div>;
+// Loading Spinner
+const LoadingSpinner = () => (
+  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto"></div>
+);
 
-// 🦴 Project Grid Skeleton
+// Project Grid Skeleton
 const ProjectsGridSkeleton = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {[1, 2, 3].map(i => (
+    {[1, 2, 3].map((i) => (
       <div key={i} className="animate-pulse">
         <div className="h-1 bg-gray-300 w-full"></div>
         <div className="p-6 space-y-4">
@@ -318,3 +402,5 @@ const EmptyProjectState = ({ setOpen }) => (
     </CardContent>
   </Card>
 );
+
+export default ProjectsSection;

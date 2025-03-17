@@ -1,33 +1,36 @@
-import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Link, useNavigate } from "react-router-dom"
-import { FcGoogle } from 'react-icons/fc'
-import { Github, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
-import { useToast } from "@/components/ui/use-toast"
-import { motion } from "framer-motion"
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Link, useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { Github, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { motion } from "framer-motion";
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isGithubLoading, setIsGithubLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [showEmailForm, setShowEmailForm] = useState(false)
-  const [isEmailFormLoading, setIsEmailFormLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [isEmailFormLoading, setIsEmailFormLoading] = useState(false);
 
-  const { login, loginWithGoogle, loginWithGitHub } = useAuth()
-  const navigate = useNavigate()
-  const { toast } = useToast()
+  const { login, loginWithGoogle, loginWithGitHub } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const location = window.location.pathname
-    console.log("Condition",location == "/auth/login" && localStorage.getItem("token"))
+    const location = window.location.pathname;
+    console.log(
+      "Condition",
+      location == "/auth/login" && localStorage.getItem("token"),
+    );
     if (location == "/auth/login" && localStorage.getItem("token")) {
-      setTimeout(()=>navigate('/dashboard'),2000)
+      setTimeout(() => navigate("/dashboard"), 2000);
     }
-  }, [])
+  }, []);
 
   // Animation variants
   const containerVariants = {
@@ -36,65 +39,65 @@ export default function Login() {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  }
+        delayChildren: 0.2,
+      },
+    },
+  };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 }
-  }
+    visible: { y: 0, opacity: 1 },
+  };
 
   const handleLogin = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      setIsEmailFormLoading(true)
-      await login(email, password)
-      navigate('/dashboard')
+      setIsEmailFormLoading(true);
+      await login(email, password);
+      navigate("/dashboard");
     } catch (error) {
-      console.error('Login failed:', error)
+      console.error("Login failed:", error);
       toast({
         variant: "destructive",
         title: "Authentication Failed",
         description: "Invalid email or password. Please try again.",
-      })
+      });
     } finally {
-      setIsEmailFormLoading(false)
+      setIsEmailFormLoading(false);
     }
-  }
+  };
 
   const handleGoogleLogin = async () => {
     try {
-      setIsGoogleLoading(true)
-      await loginWithGoogle()
+      setIsGoogleLoading(true);
+      await loginWithGoogle();
     } catch (error) {
-      console.error('Google login failed:', error)
+      console.error("Google login failed:", error);
       toast({
         variant: "destructive",
         title: "Authentication Failed",
         description: "Failed to initialize Google login. Please try again.",
-      })
+      });
     } finally {
-      setIsGoogleLoading(false)
+      setIsGoogleLoading(false);
     }
-  }
+  };
 
   const handleGithubLogin = async () => {
     try {
-      setIsGithubLoading(true)
-      await loginWithGitHub()
+      setIsGithubLoading(true);
+      await loginWithGitHub();
     } catch (error) {
-      console.error('GitHub login failed:', error)
+      console.error("GitHub login failed:", error);
       toast({
         variant: "destructive",
         title: "Authentication Failed",
         description: "Failed to initialize GitHub login. Please try again.",
-      })
+      });
     } finally {
-      setIsGithubLoading(false)
+      setIsGithubLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
@@ -110,31 +113,33 @@ export default function Login() {
       <div className="absolute inset-0 bg-grid-pattern opacity-5" />
 
       {/* Floating particles */}
-      {Array(8).fill().map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full bg-primary/20 blur-xl"
-          style={{
-            width: Math.random() * 100 + 50,
-            height: Math.random() * 100 + 50,
-          }}
-          initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            opacity: 0,
-          }}
-          animate={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            opacity: [0.1, 0.3, 0.1],
-          }}
-          transition={{
-            duration: Math.random() * 20 + 15,
-            repeat: Infinity,
-            delay: Math.random() * 5,
-          }}
-        />
-      ))}
+      {Array(8)
+        .fill()
+        .map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-primary/20 blur-xl"
+            style={{
+              width: Math.random() * 100 + 50,
+              height: Math.random() * 100 + 50,
+            }}
+            initial={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              opacity: 0,
+            }}
+            animate={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              opacity: [0.1, 0.3, 0.1],
+            }}
+            transition={{
+              duration: Math.random() * 20 + 15,
+              repeat: Infinity,
+              delay: Math.random() * 5,
+            }}
+          />
+        ))}
 
       <motion.div
         className="w-full max-w-md space-y-8 p-8 border rounded-xl rgba(30, 41, 59, 0.4) border-white backdrop-blur-sm shadow-xl relative z-10"
@@ -143,7 +148,9 @@ export default function Login() {
         animate="visible"
       >
         <motion.div className="text-center" variants={itemVariants}>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Welcome back</h2>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Welcome back
+          </h2>
           <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </motion.div>
 
@@ -275,12 +282,15 @@ export default function Login() {
           className="text-center text-sm text-muted-foreground"
           variants={itemVariants}
         >
-          Don't have an account?{' '}
-          <Link to="/auth/register" className="text-primary hover:underline font-medium">
+          Don't have an account?{" "}
+          <Link
+            to="/auth/register"
+            className="text-primary hover:underline font-medium"
+          >
             Register
           </Link>
         </motion.p>
       </motion.div>
     </div>
-  )
+  );
 }

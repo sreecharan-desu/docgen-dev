@@ -1,30 +1,27 @@
-import { useState } from "react"
-import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Link, useNavigate } from "react-router-dom"
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Register() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [registered, setRegistered] = useState(false)
-  const { register } = useAuth()
-  const navigate = useNavigate()
-
-
-  
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [registered, setRegistered] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await register(email, password, name)
-      setRegistered(true)
+      await register(email, password, name);
+      setRegistered(true);
     } catch (error) {
-      console.error('Registration failed:', error)
+      console.error("Registration failed:", error);
     }
-  }
+  };
 
   if (registered) {
     return (
@@ -33,18 +30,19 @@ export default function Register() {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Check Your Email</h2>
             <p className="text-muted-foreground">
-              We've sent a verification link to your email address. Please check your inbox and click the link to verify your account.
+              We've sent a verification link to your email address. Please check
+              your inbox and click the link to verify your account.
             </p>
             <p className="text-sm text-muted-foreground">
               Don't see the email? Check your spam folder.
             </p>
           </div>
-          <Button onClick={() => navigate('/auth/login')} variant="outline">
+          <Button onClick={() => navigate("/auth/login")} variant="outline">
             Back to Login
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -52,8 +50,12 @@ export default function Register() {
       <div className="w-full max-w-md space-y-8 p-8 border rounded-lg bg-card">
         <div className="text-center">
           <h2 className="text-3xl font-bold">Create an account</h2>
-          <p className="text-muted-foreground mt-2">Registration temporarily disabled</p>
-          <p className="text-muted-foreground mt-4 text-sm">Please use Google login to access the platform</p>
+          <p className="text-muted-foreground mt-2">
+            Registration temporarily disabled
+          </p>
+          <p className="text-muted-foreground mt-4 text-sm">
+            Please use Google login to access the platform
+          </p>
         </div>
 
         <form onSubmit={handleRegister} className="space-y-6 opacity-50">
@@ -101,12 +103,12 @@ export default function Register() {
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <Link to="/auth/login" className="text-primary hover:underline">
             Sign in with Google
           </Link>
         </p>
       </div>
     </div>
-  )
-} 
+  );
+}

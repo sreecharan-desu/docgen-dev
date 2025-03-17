@@ -5,15 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppRoutes } from "./AppRoutes";
-import { SpeedInsights } from "@vercel/speed-insights/react"
-import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 import { RecoilRoot } from "recoil";
 
 const queryClient = new QueryClient();
 
-
 const App = () => (
-
   <RecoilRoot>
     <BrowserRouter>
       <AuthProvider>

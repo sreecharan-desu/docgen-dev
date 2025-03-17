@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
 
 export default function GoogleCallback() {
   return (
@@ -15,5 +15,5 @@ export default function GoogleCallback() {
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}

@@ -9,12 +9,12 @@ const NotFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showEasterEgg, setShowEasterEgg] = useState(false);
   const [clickCount, setClickCount] = useState(0);
-  
+
   // Log the 404 error
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
-      location.pathname
+      location.pathname,
     );
   }, [location.pathname]);
 
@@ -23,7 +23,7 @@ const NotFound = () => {
     const { clientX, clientY } = e;
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
-    
+
     setMousePosition({
       x: (clientX - centerX) / 25,
       y: (clientY - centerY) / 25,
@@ -32,19 +32,21 @@ const NotFound = () => {
 
   // Increment click counter and show easter egg
   const handleNumberClick = () => {
-    setClickCount(prev => prev + 1);
+    setClickCount((prev) => prev + 1);
     if (clickCount >= 3) {
       setShowEasterEgg(true);
     }
   };
 
   // Random positions for floating elements
-  const randomFloaters = Array(5).fill().map((_, i) => ({
-    x: Math.random() * 60 - 30,
-    y: Math.random() * 60 - 30,
-    size: Math.random() * 0.5 + 0.5,
-    delay: i * 0.2,
-  }));
+  const randomFloaters = Array(5)
+    .fill()
+    .map((_, i) => ({
+      x: Math.random() * 60 - 30,
+      y: Math.random() * 60 - 30,
+      size: Math.random() * 0.5 + 0.5,
+      delay: i * 0.2,
+    }));
 
   // Text animation variants
   const textVariants = {
@@ -53,7 +55,7 @@ const NotFound = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen w-full flex items-center justify-center bg-transparent text-white overflow-hidden"
       onMouseMove={handleMouseMove}
       initial={{ opacity: 0 }}
@@ -61,30 +63,32 @@ const NotFound = () => {
       transition={{ duration: 0.8 }}
     >
       {/* Ambient background particles */}
-      {Array(20).fill().map((_, i) => (
-        <motion.div
-          key={`particle-${i}`}
-          className="absolute rounded-full bg-white/10"
-          style={{
-            width: Math.random() * 4 + 2,
-            height: Math.random() * 4 + 2,
-          }}
-          initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-          }}
-          animate={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            opacity: [0.3, 0.8, 0.3],
-          }}
-          transition={{
-            duration: Math.random() * 20 + 10,
-            repeat: Infinity,
-            delay: Math.random() * 5,
-          }}
-        />
-      ))}
+      {Array(20)
+        .fill()
+        .map((_, i) => (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute rounded-full bg-white/10"
+            style={{
+              width: Math.random() * 4 + 2,
+              height: Math.random() * 4 + 2,
+            }}
+            initial={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+            }}
+            animate={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              opacity: [0.3, 0.8, 0.3],
+            }}
+            transition={{
+              duration: Math.random() * 20 + 10,
+              repeat: Infinity,
+              delay: Math.random() * 5,
+            }}
+          />
+        ))}
 
       {/* Glowing orb background */}
       <motion.div
@@ -114,17 +118,21 @@ const NotFound = () => {
             }}
             transition={{ type: "spring", stiffness: 75, damping: 15 }}
           >
-            <motion.h1 
+            <motion.h1
               className="text-9xl font-extrabold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-500 to-indigo-600"
               initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ 
-                scale: 1, 
+              animate={{
+                scale: 1,
                 opacity: 1,
-                textShadow: ["0 0 10px rgba(99, 102, 241, 0.8)", "0 0 20px rgba(99, 102, 241, 0.4)", "0 0 10px rgba(99, 102, 241, 0.8)"]
+                textShadow: [
+                  "0 0 10px rgba(99, 102, 241, 0.8)",
+                  "0 0 20px rgba(99, 102, 241, 0.4)",
+                  "0 0 10px rgba(99, 102, 241, 0.8)",
+                ],
               }}
-              transition={{ 
+              transition={{
                 duration: 0.8,
-                textShadow: { duration: 2, repeat: Infinity }
+                textShadow: { duration: 2, repeat: Infinity },
               }}
               onClick={handleNumberClick}
               whileHover={{ scale: 1.05 }}
@@ -167,30 +175,32 @@ const NotFound = () => {
           </motion.div>
 
           {/* Message text */}
-          <motion.div 
+          <motion.div
             className="text-center space-y-6"
             initial="hidden"
             animate="visible"
             transition={{ staggerChildren: 0.2, delayChildren: 0.3 }}
           >
-            <motion.h2 
+            <motion.h2
               className="text-3xl font-light text-white/90"
               variants={textVariants}
             >
               Page Not Found
             </motion.h2>
-            
-            <motion.p 
+
+            <motion.p
               className="text-lg text-white/60 max-w-md"
               variants={textVariants}
             >
-              The page at <span className="font-mono bg-white/10 px-2 py-1 rounded text-sm">{location.pathname}</span> seems to have wandered off into the digital void.
+              The page at{" "}
+              <span className="font-mono bg-white/10 px-2 py-1 rounded text-sm">
+                {location.pathname}
+              </span>{" "}
+              seems to have wandered off into the digital void.
             </motion.p>
 
-  
-
             {/* Action buttons */}
-            <motion.div 
+            <motion.div
               className="flex flex-wrap justify-center gap-4 mt-8"
               variants={textVariants}
             >
@@ -226,14 +236,16 @@ const NotFound = () => {
             >
               <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20">
                 <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                <span className="text-white/80">You found a secret! Still a 404 though.</span>
+                <span className="text-white/80">
+                  You found a secret! Still a 404 though.
+                </span>
               </div>
             </motion.div>
           )}
         </div>
 
         {/* Footer attribution */}
-        <motion.p 
+        <motion.p
           className="text-center text-white/30 text-sm mt-12"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -7,12 +7,12 @@ import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
-  email_confirmed: boolean
-  created_at: string
-  id: string
-  email: string
-  name?: string
-  avatarUrl?: string
+  email_confirmed: boolean;
+  created_at: string;
+  id: string;
+  email: string;
+  name?: string;
+  avatarUrl?: string;
 }
 
 interface SettingsSectionProps {
@@ -30,7 +30,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
     name: initialUser?.name || "",
   });
   const { toast } = useToast();
-  
+
   useEffect(() => {
     if (authUser && (!user || user.id !== authUser.id)) {
       setUser(authUser);
@@ -57,12 +57,12 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
     try {
       // API call would go here
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      setUser((prev) => prev ? { ...prev, name: formState.name } : null);
+
+      setUser((prev) => (prev ? { ...prev, name: formState.name } : null));
       setIsEditing(false);
       toast({
         title: "Success",
-        description: "Your profile has been updated"
+        description: "Your profile has been updated",
       });
     } catch (error) {
       toast({
@@ -102,7 +102,9 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
           <Settings className="h-6 w-6" />
           Account Settings
         </h1>
-        <p className="text-gray-500">Manage your account settings and preferences</p>
+        <p className="text-gray-500">
+          Manage your account settings and preferences
+        </p>
       </div>
 
       {/* User Avatar section */}
@@ -132,13 +134,9 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
             </div>
 
             <div className="space-y-3 flex-1">
-                                        
-
               <div>
                 <p className="text-xs text-gray-500">Member Since</p>
-                <p className="text-sm">
-                  {formatDate(user.created_at)}
-                </p>
+                <p className="text-sm">{formatDate(user.created_at)}</p>
               </div>
 
               <div>
@@ -174,7 +172,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
               </label>
               <input
                 type="email"
-                value={user?.email || ''}
+                value={user?.email || ""}
                 disabled
                 className="w-full p-2 rounded border bg-transparent text-gray-500"
               />
@@ -214,20 +212,13 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isLoading}
-                >
+                <Button type="button" onClick={handleSave} disabled={isLoading}>
                   <Save className="h-4 w-4 mr-2" />
                   {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
               </>
             ) : (
-              <Button
-                type="button"
-                onClick={() => setIsEditing(true)}
-              >
+              <Button type="button" onClick={() => setIsEditing(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 Edit Profile
               </Button>
