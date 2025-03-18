@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, PlusCircle, Users, FileText, X, Plus, File, Clock, ChevronRight } from "lucide-react";
+import { ChevronLeft, PlusCircle, Users, FileText, X, Plus, File, Clock, ChevronRight, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/dashboard/Sidebar";
@@ -10,11 +10,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { v4 as uuidv4 } from "uuid";
 // Custom Components
 import ImportRepoModal from "../components/ImportRepoModal";
 import EmptyState from "../components/EmptyState";
 import MdPreview from "../components/MdPreview";
+import { LoadingAnimation } from "@/AppRoutes";
+import { Folder, GitBranch, FileCheck } from "lucide-react"; // Add Folder icon
+import { ScrollArea } from "@/components/ui/scroll-area"; // Ensure ScrollArea is imported
+import { Copy } from "lucide-react"; // Add Copy icon
+import ReactMarkdown from "react-markdown"; // For markdown rendering
+
 
 const GET_PROJECT_API = async (projectId, token) => {
   try {
@@ -55,17 +61,31 @@ const GET_REPOS_API = async (projectId, userId, token) => {
 
 const IMPORT_REPO_API = async (projectId, userId, repoData, token) => {
   try {
-    // In a real implementation, this would make an API call to import the repo
+    const storedFilesKey = `files_${projectId}_${repoData.url}`;
+    const storedFiles = localStorage.getItem(storedFilesKey);
+    let files = repoData.files || (storedFiles ? JSON.parse(storedFiles) : ["README.md"]);
+
+    if (!Array.isArray(files)) {
+      console.warn("Invalid file data, using fallback");
+      files = ["README.md"];
+    }
+
+    localStorage.setItem(storedFilesKey, JSON.stringify(files));
+
     const newRepo = {
-      id: Date.now(),
-      ...repoData,
-      files: ["index.js", "styles.css", "utils.js"],
+      id: uuidv4(),
+      name: repoData.name,
+      url: repoData.url,
+      type: repoData.type,
+      source: repoData.source,
+      files,
       userId,
       projectId,
       documentationHistory: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
+
     return newRepo;
   } catch (error) {
     console.error("Error importing repository:", error);
@@ -127,7 +147,14 @@ const ProjectRepositories = () => {
 
   // Fetch project and repositories data
   useEffect(() => {
+
+    if(localStorage.getItem("token")==undefined || localStorage.getItem("token") == null){
+      navigate('/')
+    }
     const fetchData = async () => {
+      if(localStorage.getItem("token")==undefined || localStorage.getItem("token") == null){
+        navigate('/')
+      }
       try {
         const projectData = await GET_PROJECT_API(projectId, JWT_TOKEN);
         const repoData = await GET_REPOS_API(projectId, user?.id, JWT_TOKEN);
@@ -152,18 +179,17 @@ const ProjectRepositories = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleImportSubmit = async (url, type, source) => {
+  const handleImportSubmit = async (url, type, source, files) => {
     try {
-      // Extract repo name from URL
       const name = url.split("/").pop().replace(/\.git$/, "") || "New Repository";
-      const repoData = { name, url, type, source };
+      const repoData = { name, url, type, source, files };
 
       const newRepo = await IMPORT_REPO_API(projectId, user?.id, repoData, JWT_TOKEN);
       const updatedRepos = [...repositories, newRepo];
       setRepositories(updatedRepos);
 
-      // Update localStorage
       localStorage.setItem(`repos_${projectId}_${user?.id}`, JSON.stringify(updatedRepos));
+      localStorage.removeItem(`repos_${projectId}`);
       toast.success("Repository imported successfully");
       setIsImportModalOpen(false);
     } catch (error) {
@@ -177,6 +203,32 @@ const ProjectRepositories = () => {
     setIsRepoPreviewOpen(true);
   };
 
+  const renderFileExplorer = (files) => {
+    return (
+      <div className="w-72 flex-shrink-0 bg-[rgb(13_17_23_/_0.3)] border-r border-gray-600">
+        <div className="p-4 border-b border-gray-600">
+          <h3 className="text-sm font-semibold text-gray-200">Files</h3>
+        </div>
+        <ScrollArea className="h-[calc(60vh-112px)]">
+          <div className="p-4">
+            {files.length > 0 ? (
+              files.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 py-2 text-sm text-gray-300 hover:bg-gray-700/50 rounded-md transition-colors duration-200"
+                >
+                  <FileText className="h-4 w-4 text-teal-400" />
+                  <span className="truncate">{file}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-400 italic">No files available</p>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  };
   const generateDocumentation = async () => {
     if (!selectedRepo) return;
 
@@ -253,17 +305,116 @@ const ProjectRepositories = () => {
 
   // Loading state
   if (!project) {
+
     return (
       <div className="flex h-screen items-center justify-center rgb(13 17 23 / 0.3) text-gray-200">
-        <div className="text-lg font-semibold">Loading project...</div>
+        <LoadingAnimation />
       </div>
     );
   }
 
+  const DocumentationPreview = ({ content, repoName, onClose, onDownload }) => {
+    const [activeTab, setActiveTab] = useState("preview"); // Toggle between Preview and Raw
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(content);
+      toast.success("Copied to clipboard!");
+    };
+
+    return (
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl bg-[#0d1117] text-[#c9d1d9] border border-[#30363d] rounded-lg p-0">
+          <div className="flex flex-col h-[80vh] w-full bg-[#0d1117] rounded-lg overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 bg-[#161b22] border-b border-[#30363d]">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#f85149]" />
+                <div className="w-3 h-3 rounded-full bg-[#f0883e]" />
+                <div className="w-3 h-3 rounded-full bg-[#2ea043]" />
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-center font-medium text-[#c9d1d9]">
+                  Documentation - {repoName || "Unnamed"}
+                </span>
+                <div className="flex gap-1 bg-[#21262d] rounded-md p-1 mr-10">
+                  <button
+                    onClick={() => setActiveTab("preview")}
+                    className={`px-3 py-1 text-sm rounded-md ${activeTab === "preview"
+                      ? "bg-[#30363d] text-[#c9d1d9]"
+                      : "text-[#8b949e] hover:bg-[#30363d] hover:text-[#c9d1d9]"
+                      }`}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("raw")}
+                    className={`px-3 py-1 text-sm rounded-md ${activeTab === "raw"
+                      ? "bg-[#30363d] text-[#c9d1d9]"
+                      : "text-[#8b949e] hover:bg-[#30363d] hover:text-[#c9d1d9]"
+                      }`}
+                  >
+                    Raw
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Scrollable Content */}
+            <ScrollArea className="flex-1 p-6 bg-[#0d1117] text-[#c9d1d9]">
+              {activeTab === "preview" ? (
+                <div className="prose prose-invert max-w-none">
+                  <ReactMarkdown>{content}</ReactMarkdown>
+                </div>
+              ) : (
+                <pre className="text-sm text-[#c9d1d9] bg-[#161b22] p-4 rounded-md border border-[#30363d] whitespace-pre-wrap">
+                  {content}
+                </pre>
+              )}
+            </ScrollArea>
+
+            {/* Footer with Actions */}
+            <div className="p-4 border-t border-[#30363d] bg-[#161b22] flex justify-end gap-2">
+              <Button
+                onClick={handleCopy}
+                variant="outline"
+                className="bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d] hover:text-[#e6edf3] flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                Copy
+              </Button>
+              <Button
+                onClick={onDownload}
+                className="bg-[#238636] hover:bg-[#2ea043] text-white font-medium py-2 px-4 rounded-md flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // Render content based on active section
+  const renderContent = () => {
+    switch (activeSection) {
+      case "pricing":
+        navigate('/dashboard');break;
+      case "projects":
+        navigate('/dashboard');break;
+      case "settings":
+        navigate('/dashboard');break;
+      case "docs":
+        navigate("/docs");
+        return null;
+    }
+  };
+
   return (
     <div className="flex h-screen rgb(13 17 23 / 0.3) text-gray-200 overflow-hidden">
-      {/* Sidebar */}
-      <div className={`h-full rgb(13 17 23 / 0.3) ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300`}>
+      <div style={{ width: isSidebarCollapsed ? "80px" : "250px" }} className="transition-width duration-300">
         <Sidebar
           isSidebarCollapsed={isSidebarCollapsed}
           setIsSidebarCollapsed={setIsSidebarCollapsed}
@@ -273,6 +424,9 @@ const ProjectRepositories = () => {
           logout={logout}
         />
       </div>
+
+      {renderContent()}
+
 
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -321,16 +475,7 @@ const ProjectRepositories = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-1/3 p-2 bg-[#2A3A3A] border border-gray-600 rounded-md text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
-            <Select value={repoFilter} onValueChange={setRepoFilter}>
-              <SelectTrigger className="w-40 bg-[#2A3A3A] border-gray-600 text-gray-200">
-                <SelectValue placeholder="All repositories" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#2A3A3A] text-gray-200 border-gray-600">
-                <SelectItem value="all">All repositories</SelectItem>
-                <SelectItem value="personal">Personal</SelectItem>
-                <SelectItem value="shared">Shared</SelectItem>
-              </SelectContent>
-            </Select>
+
           </div>
 
           {/* Repository Grid */}
@@ -355,113 +500,156 @@ const ProjectRepositories = () => {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRepositories.map((repo) => (
-                <div
-                  key={repo.id}
-                  onClick={() => handleRepoClick(repo)}
-                  className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-base font-medium truncate">{repo.name}</h3>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredRepositories.map((repo) => (
+                  <div
+                    key={repo.id}
+                    onClick={() => handleRepoClick(repo)}
+                    className="bg-gradient-to-br bg-gray-900 rounded-xl p-5 cursor-pointer 
+            hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300 group shadow-md"
+                  >
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-4">
+                      <h3
+                        className="text-lg font-semibold text-white truncate group-hover:text-[#a3bffa] transition-colors"
+                        title={repo.name}
+                      >
+                        {repo.name}
+                      </h3>
+                      <ChevronRight className="h-5 w-5 text-[#8b949e] group-hover:text-[#a3bffa] transition-colors" />
+                    </div>
 
-                  <div className="mt-3 flex items-center text-xs text-muted-foreground space-x-4">
-                    <span className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {formatDate(repo.updatedAt)}
-                    </span>
-                    <span className="flex items-center">
-                      <File className="h-3 w-3 mr-1" />
-                      {repo.files?.length || 0}
-                    </span>
-                    <span className="flex items-center">
-                      <FileText className="h-3 w-3 mr-1" />
-                      {repo.documentationHistory?.length || 0}
-                    </span>
+                    {/* Metadata */}
+                    <div className="flex flex-col gap-2 text-sm text-[#c9d1d9]">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2 text-[#58a6ff]" />
+                          <span className="font-medium">{formatDate(repo.updatedAt)}</span>
+                        </span>
+                        <span className="px-2 py-1 bg-[#2a2e4a] text-[#79c0ff] text-xs rounded-full">
+                          {repo.source || "Local"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center">
+                          <File className="h-4 w-4 mr-2 text-[#58a6ff]" />
+                          <span>{repo.files?.length || 0} Files</span>
+                        </span>
+                        <span className="flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-[#58a6ff]" />
+                          <span>{repo.documentationHistory?.length || 0} Docs</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Subtle Footer */}
+                    <div className="mt-4 pt-3 border-t border-[#3b3f5c]/50 flex justify-end">
+                      <span className="text-xs text-[#8b949e] italic">
+                        Last updated: {formatDate(repo.updatedAt)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </main>
       </div>
 
       {/* Repository Preview Popup */}
-      <Dialog open={isRepoPreviewOpen} onOpenChange={(open) => {
-        setIsRepoPreviewOpen(open);
-        if (!open) setSelectedRepo(null);
-      }}>
+      <Dialog
+        open={isRepoPreviewOpen}
+        onOpenChange={(open) => {
+          setIsRepoPreviewOpen(open);
+          if (!open) setSelectedRepo(null);
+        }}
+      >
         <DialogContent className="max-w-4xl bg-[#2A3A3A] text-gray-200 border border-gray-600 rounded-lg p-0">
           {selectedRepo && (
-            <div className="flex flex-col h-[60vh]">
-              <div className="flex items-center justify-between p-2 rgb(13 17 23 / 0.3) border-b border-gray-600">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+            <div className="flex h-[60vh] w-full bg-[#1A2525] rounded-lg overflow-hidden border border-gray-600">
+              {/* Enhanced File Explorer Sidebar */}
+              {renderFileExplorer(selectedRepo.files || [])}
+
+              {/* Main Content Area */}
+              <div className="flex-1 flex flex-col">
+                {/* Title Bar */}
+                <div className="flex items-center justify-between p-2 bg-[#2A3A3A] border-b border-gray-600">
+                  <span className="text-sm font-medium text-gray-200">
+                    {selectedRepo.name} - Preview
+                  </span>
                 </div>
-                <span className="text-sm font-medium text-gray-200">
-                  Preview of {selectedRepo.name}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsRepoPreviewOpen(false)}
-                  className="text-gray-400 hover:text-white hover:bg-gray-600 rounded-full p-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex-1 p-4 overflow-y-auto">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-200 mb-2">Files</h3>
-                  {selectedRepo.files && selectedRepo.files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 p-2 rgb(13 17 23 / 0.3) rounded-md border border-gray-600"
-                    >
-                      <FileText className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">{file}</span>
+
+                {/* Main Content */}
+                <ScrollArea className="flex-1 p-6 bg-[#1A2525] text-gray-200">
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white mb-4">
+                        Repository: {selectedRepo.name}
+                      </h2>
+                      <p className="text-sm text-gray-400">
+                        {selectedRepo.files?.length || 0} files in this repository
+                      </p>
                     </div>
-                  ))}
-                </div>
-                {selectedRepo.documentationHistory && selectedRepo.documentationHistory.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-200 mb-2">Documentation History</h3>
-                    {selectedRepo.documentationHistory.map((doc, index) => (
-                      <div
-                        key={index}
-                        className="p-2 rgb(13 17 23 / 0.3) rounded-md border border-gray-600 mb-2 cursor-pointer hover:bg-gray-600 transition-colors duration-200"
-                        onClick={() => setDocumentation({ content: doc.content, repoId: selectedRepo.id })}
-                      >
-                        <p className="text-xs text-gray-400">
-                          Generated on: {new Date(doc.timestamp).toLocaleString()}
-                        </p>
+
+                    {selectedRepo.documentationHistory?.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-white mb-3">Documentation Versions</h3>
+                        {selectedRepo.documentationHistory.map((doc, index, arr) => {
+                          const version = `V_${Math.floor(arr.length - index)}.${index + 1}.0`; // Simple versioning
+                          return (
+                            <div
+                              key={index}
+                              className="p-3 bg-[rgb(13_17_23_/_0.3)] rounded-md border border-gray-600 mb-2 cursor-pointer hover:bg-gray-600 transition-colors duration-200"
+                              onClick={() => setDocumentation({ content: doc.content, repoId: selectedRepo.id })}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-teal-400" />
+                                <span className="text-sm font-medium text-gray-200">{version}</span>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(doc.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="p-4 border-t border-gray-600">
-                {isGeneratingDocs ? (
-                  <div className="space-y-2">
-                    <div
-                      style={{ width: `${progress}%` }}
-                      className="h-2 bg-teal-500 rounded-full transition-all duration-1000"
-                    />
-                    <p className="text-sm text-gray-400 text-center">Generating...</p>
+                </ScrollArea>
+
+                {/* Status Bar */}
+                <div className="h-6 border-t border-gray-600 bg-[#1A2525] flex items-center px-3 justify-between">
+                  <div className="flex items-center text-xs text-gray-400">
+                    <GitBranch className="h-3.5 w-3.5 mr-1" />
+                    main
                   </div>
-                ) : (
-                  <Button
-                    onClick={generateDocumentation}
-                    className="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    {selectedRepo.documentation ? "Regenerate Documentation" : "Generate Documentation"}
-                  </Button>
-                )}
+                  <div className="flex items-center text-xs text-gray-400">
+                    <FileCheck className="h-3.5 w-3.5 mr-1" />
+                    {selectedRepo.files?.length || 0} files
+                  </div>
+                </div>
+
+                {/* Action Bar */}
+                <div className="p-4 border-t border-gray-600 bg-[#1A2525]">
+                  {isGeneratingDocs ? (
+                    <div className="space-y-2">
+                      <div
+                        style={{ width: `${progress}%` }}
+                        className="h-2 bg-teal-500 rounded-full transition-all duration-1000"
+                      />
+                      <p className="text-sm text-gray-400 text-center">Generating...</p>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={generateDocumentation}
+                      className="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      {selectedRepo.documentation ? "Regenerate Docs" : "Generate Docs"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -520,13 +708,12 @@ const ProjectRepositories = () => {
         onImport={handleImportSubmit}
         projectId={projectId}
       />
-
       {/* Documentation Preview */}
       {documentation && (
-        <MdPreview
-          isOpen={!!documentation}
-          onClose={() => setDocumentation(null)}
+        <DocumentationPreview
           content={documentation.content}
+          repoName={selectedRepo?.name}
+          onClose={() => setDocumentation(null)}
           onDownload={() => {
             const blob = new Blob([documentation.content], { type: "text/markdown" });
             const url = URL.createObjectURL(blob);
@@ -534,7 +721,7 @@ const ProjectRepositories = () => {
             a.href = url;
             a.download = `${selectedRepo?.name || "document"}_docs.md`;
             a.click();
-            URL.revokeObjectURL(url); // Clean up to avoid memory leaks
+            URL.revokeObjectURL(url);
           }}
         />
       )}

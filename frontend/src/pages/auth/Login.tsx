@@ -23,12 +23,8 @@ export default function Login() {
 
   useEffect(() => {
     const location = window.location.pathname;
-    console.log(
-      "Condition",
-      location == "/auth/login" && localStorage.getItem("token"),
-    );
     if (location == "/auth/login" && localStorage.getItem("token")) {
-      setTimeout(() => navigate("/dashboard"), 2000);
+      window.location.pathname = "/dashboard"
     }
   }, []);
 
@@ -278,7 +274,7 @@ export default function Login() {
           </motion.div>
         )} */}
 
-        <motion.p
+        {/* <motion.p
           className="text-center text-sm text-muted-foreground"
           variants={itemVariants}
         >
@@ -289,7 +285,7 @@ export default function Login() {
           >
             Register
           </Link>
-        </motion.p>
+        </motion.p> */}
       </motion.div>
     </div>
   );

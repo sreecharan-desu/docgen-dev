@@ -49,7 +49,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const validateToken = async (token: string) => {
     try {
-      navigate('/')
       const response = await fetch(`${API_URL}/api/v1/auth/me`, {
         method: "GET",
         headers: {
@@ -59,8 +58,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        navigate('/dashboard')
-
       } else {
         localStorage.removeItem("token");
       }

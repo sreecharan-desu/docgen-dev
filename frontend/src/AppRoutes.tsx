@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { useAuth } from "./contexts/AuthContext";
 
 // Lazy-loaded pages
 const Index = lazy(() => import("./pages/Index"));
@@ -21,116 +22,127 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const ProjectPage = lazy(() => import("./pages/ProjectPage"));
 
 export const AppRoutes = () => {
-  return (
-    <>
-      <Navbar />
-      <main className="pt-14 min-h-screen">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <Index />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<LoadingAnimation />}>
-                  <Dashboard />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/auth/login"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <Login />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/auth/register"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <Register />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/auth/forgot-password"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <ForgotPassword />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/auth/reset-password"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <ResetPassword />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/auth/verify"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <EmailVerification />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/auth/callback/google"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <GoogleCallback />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/auth/callback/github"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <GitHubCallback />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/docs"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <Docs />
-              </Suspense>
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <NotFound />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/project/:id"
-            element={
-              <Suspense fallback={<LoadingAnimation />}>
-                <ProjectPage />
-              </Suspense>
-            }
-          />
-        </Routes>
-      </main>
-    </>
-  );
-};
 
-const LoadingAnimation = () => {
+  const user = useAuth()
+
+  if (user == null && localStorage.getItem("token")) {
+    return <>
+      <LoadingAnimation />
+    </>
+  } else {
+
+
+    return (
+      <>
+        <Navbar />
+        <main className="pt-14 min-h-screen">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <Index />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingAnimation />}>
+                    <Dashboard />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/auth/login"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <Login />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/register"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <Register />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/forgot-password"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <ForgotPassword />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/reset-password"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <ResetPassword />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/verify"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <EmailVerification />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/callback/google"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <GoogleCallback />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/auth/callback/github"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <GitHubCallback />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/docs"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <Docs />
+                </Suspense>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <NotFound />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/project/:id"
+              element={
+                <Suspense fallback={<LoadingAnimation />}>
+                  <ProjectPage />
+                </Suspense>
+              }
+            />
+          </Routes>
+        </main>
+      </>
+    );
+  };
+}
+
+export const LoadingAnimation = () => {
   return (
     <div className="fixed inset-0 flex justify-center items-center">
       <div className="relative w-16 h-16">

@@ -107,7 +107,7 @@ const ProjectsSection = () => {
       const data = await response.json();
       setProjects(data);
     } catch (err) {
-      setFetchError(err.message || "Error fetching projects. Please try again.");
+      setFetchError(err.message || `Error fetching projects. Please try again. ${<b className="underline" onClick={async()=>await fetchProjects()}>Retry</b>}`);
     } finally {
       setFetchingProjects(false);
     }
@@ -213,18 +213,7 @@ const ProjectsSection = () => {
                 className="pl-10 w-full"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-border rounded-md px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="all">All Projects</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            
           </div>
         </header>
 

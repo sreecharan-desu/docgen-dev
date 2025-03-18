@@ -4,17 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import {
-  Brain,
-  Github,
-  Zap,
-  Database,
-  Key,
-  Globe,
-  FileCode,
-  MessageSquare,
-  ArrowRight,
-  Star,
-  Sparkles,
+  Brain, Github, Zap, Database, Key, Globe, FileCode, MessageSquare, ArrowRight, Star,
+  Sparkles
 } from "lucide-react";
 import BillingSection from "@/components/dashboard/BillingSection";
 
@@ -52,7 +43,7 @@ const Index = () => {
       "docgen auth login --key=YOUR_API_KEY",
       "docgen generate --current-dir",
       "docgen analyze --repo https://github.com/user/project",
-      "docgen export --format markdown --output ./docs",
+      "docgen export --format markdown --output ./docs"
     ];
 
     let typingTimer;
@@ -106,9 +97,9 @@ const Index = () => {
 
   const handleGetStarted = () => {
     if (user) {
-      navigate("/dashboard");
+      navigate('/dashboard');
     } else {
-      navigate("/auth/login");
+      navigate('/auth/login');
     }
   };
 
@@ -175,9 +166,9 @@ const Index = () => {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
+        delayChildren: 0.2
+      }
+    }
   };
 
   const itemVariants = {
@@ -185,8 +176,8 @@ const Index = () => {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { type: "spring", stiffness: 100 },
-    },
+      transition: { type: "spring", stiffness: 100 }
+    }
   };
 
   const staggerVariants = {
@@ -194,9 +185,9 @@ const Index = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.07,
-      },
-    },
+        staggerChildren: 0.07
+      }
+    }
   };
 
   const letterVariants = {
@@ -207,26 +198,17 @@ const Index = () => {
       transition: {
         type: "spring",
         damping: 12,
-        stiffness: 100,
-      },
-    },
+        stiffness: 100
+      }
+    }
   };
 
   // Split text animation helper
   const SplitText = ({ text, className }) => {
     return (
-      <motion.span
-        variants={staggerVariants}
-        initial="hidden"
-        animate="visible"
-        className={className}
-      >
+      <motion.span variants={staggerVariants} initial="hidden" animate="visible" className={className}>
         {text.split("").map((char, index) => (
-          <motion.span
-            key={index}
-            variants={letterVariants}
-            className="inline-block"
-          >
+          <motion.span key={index} variants={letterVariants} className="inline-block">
             {char === " " ? "\u00A0" : char}
           </motion.span>
         ))}
@@ -262,7 +244,7 @@ const Index = () => {
           transition={{
             duration: 15,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: "easeInOut"
           }}
         />
         <motion.div
@@ -276,7 +258,7 @@ const Index = () => {
           transition={{
             duration: 20,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: "easeInOut"
           }}
         />
         <motion.div
@@ -290,7 +272,7 @@ const Index = () => {
           transition={{
             duration: 18,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: "easeInOut"
           }}
         />
       </div>
@@ -318,7 +300,7 @@ const Index = () => {
             transition={{
               duration: 8,
               repeat: Infinity,
-              ease: "easeInOut",
+              ease: "easeInOut"
             }}
           />
           <motion.div
@@ -334,7 +316,7 @@ const Index = () => {
             transition={{
               duration: 10,
               repeat: Infinity,
-              ease: "easeInOut",
+              ease: "easeInOut"
             }}
           />
 
@@ -346,31 +328,24 @@ const Index = () => {
               initial={{
                 x: Math.random() * window.innerWidth,
                 y: Math.random() * window.innerHeight,
-                opacity: 0,
+                opacity: 0
               }}
               animate={{
                 y: [null, "-100vh"],
-                opacity: [0, 0.7, 0],
+                opacity: [0, 0.7, 0]
               }}
               transition={{
                 repeat: Infinity,
                 duration: Math.random() * 20 + 15,
                 delay: Math.random() * 20,
-                ease: "linear",
+                ease: "linear"
               }}
             >
-              {
-                ["<>", "/>", "{}", "()", "[]", "/**/"][
-                  Math.floor(Math.random() * 6)
-                ]
-              }
+              {['<>', '/>', '{}', '()', '[]', '/**/'][Math.floor(Math.random() * 6)]}
             </motion.div>
           ))}
 
-          <motion.div
-            className="text-center max-w-3xl relative z-10"
-            variants={itemVariants}
-          >
+          <motion.div className="text-center max-w-3xl relative z-10" variants={itemVariants}>
             {/* Glowing badge */}
             <motion.div
               className="mx-auto mb-6 inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary backdrop-blur-md"
@@ -405,7 +380,7 @@ const Index = () => {
                   transition={{
                     duration: 3,
                     repeat: Infinity,
-                    ease: "easeInOut",
+                    ease: "easeInOut"
                   }}
                 />
               </div>
@@ -415,8 +390,7 @@ const Index = () => {
               className="text-xl text-gray-400 mb-8 max-w-xl mx-auto"
               variants={itemVariants}
             >
-              Generate comprehensive documentation for any codebase in seconds
-              with our advanced AI-powered analysis engine.
+              Generate comprehensive documentation for any codebase in seconds with our advanced AI-powered analysis engine.
             </motion.p>
 
             {/* More appealing CTA buttons */}
@@ -430,10 +404,12 @@ const Index = () => {
                 onClick={handleGetStarted}
               >
                 <span className="relative z-10 flex items-center">
-                  {user ? "Go to Dashboard" : "Start Documenting"}
+                  {user ? 'Go to Dashboard' : 'Start Documenting'}
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
-                <motion.span className="absolute inset-0 bg-gradient-to-r from-blue-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-blue-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                />
               </Button>
 
               <Button
@@ -447,8 +423,11 @@ const Index = () => {
                 </span>
               </Button>
             </motion.div>
+
+           
           </motion.div>
         </motion.div>
+
 
         {/* Enhanced Metrics Section with animated counters */}
         <motion.div
@@ -460,26 +439,10 @@ const Index = () => {
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              {
-                value: "100k+",
-                label: "Files Documented",
-                icon: <FileCode className="h-6 w-6" />,
-              },
-              {
-                value: "10k+",
-                label: "Active Users",
-                icon: <Database className="h-6 w-6" />,
-              },
-              {
-                value: "50+",
-                label: "Languages",
-                icon: <Globe className="h-6 w-6" />,
-              },
-              {
-                value: "4.9/5",
-                label: "User Rating",
-                icon: <Star className="h-6 w-6" />,
-              },
+              { value: "100k+", label: "Files Documented", icon: <FileCode className="h-6 w-6" /> },
+              { value: "10k+", label: "Active Users", icon: <Database className="h-6 w-6" /> },
+              { value: "50+", label: "Languages", icon: <Globe className="h-6 w-6" /> },
+              { value: "4.9/5", label: "User Rating", icon: <Star className="h-6 w-6" /> },
             ].map((metric, index) => (
               <motion.div
                 key={index}
@@ -490,17 +453,15 @@ const Index = () => {
                 viewport={{ once: true }}
                 whileHover={{ scale: 1.05, y: -5 }}
               >
-                <motion.div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                />
                 <div className="flex flex-col items-center">
                   <div className="mb-3 text-primary/80 group-hover:text-primary transition-colors duration-200">
                     {metric.icon}
                   </div>
-                  <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400 mb-2">
-                    {metric.value}
-                  </div>
-                  <div className="text-gray-400 group-hover:text-gray-300 transition-colors duration-200">
-                    {metric.label}
-                  </div>
+                  <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400 mb-2">{metric.value}</div>
+                  <div className="text-gray-400 group-hover:text-gray-300 transition-colors duration-200">{metric.label}</div>
                 </div>
               </motion.div>
             ))}
@@ -523,9 +484,7 @@ const Index = () => {
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
-                Everything you need
-              </span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">Everything you need</span>
             </motion.h2>
             <motion.p
               className="text-gray-400 max-w-lg mx-auto"
@@ -534,8 +493,7 @@ const Index = () => {
               transition={{ delay: 0.1, duration: 0.5 }}
               viewport={{ once: true }}
             >
-              DocGen combines powerful AI with developer-friendly features to
-              simplify your documentation workflow
+              DocGen combines powerful AI with developer-friendly features to simplify your documentation workflow
             </motion.p>
           </motion.div>
 
@@ -550,13 +508,10 @@ const Index = () => {
                 whileHover={{
                   scale: 1.03,
                   y: -5,
-                  boxShadow: "0 10px 30px -15px rgba(0, 255, 157, 0.15)",
+                  boxShadow: "0 10px 30px -15px rgba(0, 255, 157, 0.15)"
                 }}
-                className={`relative rounded-xl border border-gray-800 transition-all duration-300 ${
-                  activeFeature === index
-                    ? "ring-2 ring-primary/50 bg-gray-900/50"
-                    : "bg-gray-900/20 hover:bg-gray-900/40"
-                }`}
+                className={`relative rounded-xl border border-gray-800 transition-all duration-300 ${activeFeature === index ? 'ring-2 ring-primary/50 bg-gray-900/50' : 'bg-gray-900/20 hover:bg-gray-900/40'
+                  }`}
                 onMouseEnter={() => setActiveFeature(index)}
               >
                 {/* Background highlight effect */}
@@ -572,21 +527,14 @@ const Index = () => {
                   <div className="h-12 w-12 rounded-full bg-gray-800/50 flex items-center justify-center mb-4 border border-gray-700/50">
                     {feature.icon}
                   </div>
-                  <h3 className="text-xl font-medium mb-2 text-white">
-                    {feature.title}
-                  </h3>
+                  <h3 className="text-xl font-medium mb-2 text-white">{feature.title}</h3>
                   <p className="text-gray-400">{feature.description}</p>
                 </div>
 
                 {/* Corner accent */}
                 <div className="absolute -top-px -right-px w-10 h-10 overflow-hidden">
-                  <div
-                    className={`absolute transform rotate-45 translate-x-4 -translate-y-1 w-5 h-12 ${
-                      activeFeature === index
-                        ? "bg-primary/30"
-                        : "bg-gray-700/30"
-                    } transition-colors duration-300`}
-                  />
+                  <div className={`absolute transform rotate-45 translate-x-4 -translate-y-1 w-5 h-12 ${activeFeature === index ? 'bg-primary/30' : 'bg-gray-700/30'
+                    } transition-colors duration-300`} />
                 </div>
               </motion.div>
             ))}
@@ -634,12 +582,8 @@ const Index = () => {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-white">
-                      {testimonial.name}
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      {testimonial.role}, {testimonial.company}
-                    </p>
+                    <h3 className="text-lg font-medium text-white">{testimonial.name}</h3>
+                    <p className="text-sm text-gray-400">{testimonial.role}, {testimonial.company}</p>
                   </div>
                 </div>
                 <p className="text-gray-300 italic">{testimonial.text}</p>
@@ -692,20 +636,20 @@ const Index = () => {
                 title: "Connect your code",
                 description: "Link your GitHub repo or upload directly",
                 icon: <Github className="h-6 w-6" />,
-                number: "01",
+                number: "01"
               },
               {
                 title: "AI Analysis",
                 description: "Our AI parses and understands your codebase",
                 icon: <Brain className="h-6 w-6" />,
-                number: "02",
+                number: "02"
               },
               {
                 title: "Generate & Export",
                 description: "Get beautiful docs in your preferred format",
                 icon: <FileCode className="h-6 w-6" />,
-                number: "03",
-              },
+                number: "03"
+              }
             ].map((step, index) => (
               <motion.div
                 key={index}
@@ -721,16 +665,15 @@ const Index = () => {
                   </div>
                   <div className="text-primary">{step.icon}</div>
                 </div>
-                <h3 className="text-xl font-medium mb-2 text-center">
-                  {step.title}
-                </h3>
+                <h3 className="text-xl font-medium mb-2 text-center">{step.title}</h3>
                 <p className="text-gray-400 text-center">{step.description}</p>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        <BillingSection />
+        <BillingSection/>
+
 
         {/* CTA Section */}
         <motion.div
@@ -759,8 +702,7 @@ const Index = () => {
               transition={{ delay: 0.1, duration: 0.5 }}
               viewport={{ once: true }}
             >
-              Join thousands of developers who are saving time and improving
-              their code quality with DocGen
+              Join thousands of developers who are saving time and improving their code quality with DocGen
             </motion.p>
 
             <motion.div
@@ -779,7 +721,9 @@ const Index = () => {
                   Get Started for Free
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
-                <motion.span className="absolute inset-0 bg-gradient-to-r from-blue-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-blue-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                />
               </Button>
 
               <Button
