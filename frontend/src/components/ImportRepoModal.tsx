@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FileUp, FolderGit2, FileText, Folder, X, GitBranch, Loader2 } from "lucide-react";
+import { FileUp, FolderGit2, FileText, Folder, X, Loader2, FileCheck, GitBranch, Download, RefreshCw, ChevronDown, ChevronRight, File } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { motion, AnimatePresence } from "framer-motion";
 
 // TypeScript interface for props
 interface ImportRepoModalProps {
@@ -30,7 +29,6 @@ const IMPORT_LOCAL_REPO_API = async (
   repoData: { name: string; url: string; type: string; source: string; files: string[] },
   token: string
 ) => {
-  // Simulate network delay of 2 seconds
   await new Promise((resolve) => setTimeout(resolve, 2000));
   const newRepo = {
     id: Date.now(),
@@ -82,8 +80,7 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({ isOpen, onClose, onIm
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (fileList && fileList.length > 0) {
-      setStep("loading"); // Transition to loading state
-      // Simulate file processing delay of 1.5 seconds
+      setStep("loading");
       await new Promise((resolve) => setTimeout(resolve, 1500));
       const folderName = fileList[0].webkitRelativePath.split("/")[0];
       const fileArray = Array.from(fileList);
@@ -107,7 +104,7 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({ isOpen, onClose, onIm
     if (!files.length || !repoName) return;
 
     setIsSubmitting(true);
-    setStep("loading"); // Transition to loading state
+    setStep("loading");
     try {
       const mockUrl = `local://${repoName}`;
       await onImport(mockUrl, "local", "local");
@@ -127,7 +124,7 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({ isOpen, onClose, onIm
     } catch (error) {
       toast.error("Failed to import repository");
       console.error(error);
-      setStep("vscode"); // Revert to previous step on error
+      setStep("vscode");
     } finally {
       setIsSubmitting(false);
     }
@@ -143,168 +140,150 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({ isOpen, onClose, onIm
     }, {} as Record<string, File[]>);
 
     return (
-      <ScrollArea className="h-[calc(100vh-200px)] w-[300px] border-r border-gray-800 bg-black text-gray-100">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="p-2">
-          <div className="flex items-center justify-between p-2 bg-gray-850 text-gray-400">
-            <span className="text-xs uppercase tracking-wider">Explorer</span>
+      <ScrollArea className="h-[calc(100vh-200px)] w-[300px] border-r border-gray-600 rgb(13 17 23 / 0.3) text-gray-200">
+        <div className="p-2">
+          <div className="p-2 text-xs uppercase tracking-wider text-gray-400">
+            Explorer
           </div>
           {Object.entries(groupedFiles).map(([dir, dirFiles]) => (
-            <motion.div
-              key={dir}
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="ml-2"
-            >
+            <div key={dir} className="ml-2">
               <div className="flex items-center gap-1 py-1">
-                <Folder className="h-4 w-4 text-blue-500" />
-                <span className="text-sm truncate font-medium text-gray-100">{dir || selectedFolder}</span>
+                <Folder className="h-4 w-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-200">{dir || selectedFolder}</span>
               </div>
               <div className="ml-4">
                 {dirFiles.map((file, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ x: 10, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ duration: 0.2, delay: index * 0.05 }}
-                    className="flex items-center gap-1 py-1"
-                  >
+                  <div key={index} className="flex items-center gap-1 py-1">
                     <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm truncate text-gray-300">{file.name}</span>
-                  </motion.div>
+                    <span className="text-sm text-gray-300">{file.name}</span>
+                  </div>
                 ))}
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </ScrollArea>
     );
   };
 
   const renderLoadingState = () => (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3 }}
-      className="flex flex-col items-center justify-center h-[calc(100vh-200px)] w-full bg-gray-900 rounded-lg p-6"
-    >
-      <motion.div
-        animate={{
-          rotate: 360,
-          scale: [1, 1.2, 1],
-        }}
-        transition={{
-          rotate: { duration: 1.5, repeat: Infinity, ease: "linear" },
-          scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
-        }}
-        className="relative"
-      >
-        <Loader2 className="h-16 w-16 text-blue-500" />
-        <motion.div
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute inset-0 flex items-center justify-center"
-        >
-          <GitBranch className="h-8 w-8 text-blue-400" />
-        </motion.div>
-      </motion.div>
-      <motion.h2
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="text-xl font-semibold text-white mt-6"
-      >
+    <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] w-full rgb(13 17 23 / 0.3) rounded-lg p-6">
+      <Loader2 className="h-16 w-16 text-teal-500 animate-spin" />
+      <h2 className="text-lg font-medium text-white mt-6">
         {isSubmitting ? "Importing Repository..." : "Processing Files..."}
-      </motion.h2>
-      <motion.p
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="text-sm text-gray-400 mt-2"
-      >
+      </h2>
+      <p className="text-sm text-gray-400 mt-2">
         {isSubmitting ? "Adding to project..." : "Analyzing folder structure..."}
-      </motion.p>
-    </motion.div>
+      </p>
+    </div>
   );
-
   const renderVSCodeInterface = () => (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="flex h-[calc(100vh-100px)] w-full bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-800"
-    >
-      {renderFileExplorer()}
-      <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between p-2 bg-gray-850 border-b border-gray-800">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500" />
-            <div className="w-3 h-3 rounded-full bg-green-500" />
-          </div>
-          <span className="text-sm font-medium text-gray-100">{repoName} - VS Code</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearSelection}
-            disabled={isSubmitting}
-            className="text-gray-400 hover:text-white hover:bg-gray-700"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+    <div className="flex h-[calc(100vh-100px)] w-full bg-background border border-border rounded-lg overflow-hidden">
+      {/* File Explorer - Now with scrollable sidebar */}
+      <div className="w-64 border-r border-border bg-black flex flex-col">
+        <div className="p-3 border-b border-border flex items-center justify-between">
+          <span className="text-sm font-medium">EXPLORER</span>
+          <RefreshCw className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground cursor-pointer" />
         </div>
-        <div className="flex-1 p-6 bg-gray-900 text-gray-100 flex items-center justify-center">
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="text-center"
-          >
-            <h2 className="text-xl font-semibold text-white mb-4">Repository: {repoName}</h2>
-            <p className="text-sm text-gray-400 mb-6">
+
+        {/* Made this div scrollable */}
+        <div className="p-2 flex-1 overflow-y-auto">
+          <div className="text-xs text-muted-foreground mb-2 font-medium uppercase flex items-center">
+            <ChevronDown className="h-3.5 w-3.5 mr-1" />
+            {selectedFolder}
+          </div>
+
+          <div className="space-y-1 ml-2">
+            {files.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center text-sm py-1 px-2 rounded hover:bg-gray-700 cursor-pointer group"
+              >
+                {file.type === 'folder' ? (
+                  <Folder className="h-4 w-4 mr-2 text-muted-foreground" />
+                ) : (
+                  <File className="h-4 w-4 mr-2 text-muted-foreground" />
+                )}
+                <span className="truncate text-sm">{file.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Editor Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Editor Tabs - Removed the X button */}
+        <div className="flex items-center p-1.5 bg-background border-b border-border relative">
+          <div className="flex items-center absolute left-2">
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500 ml-1.5" />
+            <div className="w-3 h-3 rounded-full bg-green-500 ml-1.5" />
+          </div>
+
+          <div className="flex items-center mx-auto">
+            <span className="text-xs text-muted-foreground">{repoName} - Preview</span>
+          </div>
+
+          {/* X button removed from here */}
+        </div>
+
+        {/* Editor Content */}
+        <div className="flex-1 bg-background p-6 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto">
+            <FileCheck className="h-10 w-10 mx-auto mb-4 text-primary" />
+            <h2 className="text-lg font-medium mb-2 text-center">Repository: {repoName}</h2>
+            <p className="text-sm text-muted-foreground mb-6 text-center">
               {files.length} files ready for import from "{selectedFolder}"
             </p>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+
+            <div className="flex justify-center">
               <Button
                 onClick={handleImport}
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
-                  <span className="flex items-center gap-2">
+                  <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Importing...
-                  </span>
+                  </>
                 ) : (
-                  "Import Local Repository"
+                  <>
+                    <Download className="h-4 w-4 mr-1" />
+                    Import
+                  </>
                 )}
               </Button>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Bar */}
+        <div className="h-6 border-t border-border bg-black flex items-center px-3 justify-between">
+          <div className="flex items-center text-xs">
+            <GitBranch className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+            <span className="text-muted-foreground">main</span>
+          </div>
+          <div className="flex items-center text-xs text-muted-foreground">
+            <FileCheck className="h-3.5 w-3.5 mr-1" />
+            {files.length} files
+          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 
-  const renderFancyInitialPopup = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="p-6 bg-gray-850 rounded-lg shadow-lg border border-gray-800"
-    >
-      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-700">
-        <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          <GitBranch className="h-16 w-16 text-blue-500" />
-        </motion.div>
-        <h3 className="text-2xl font-semibold text-white mb-3 tracking-tight">Name Your Repository</h3>
+  const renderInitialPopup = () => (
+    <div className="p-6 rgb(13 17 23 / 0.3) rounded-lg border border-gray-600">
+      <div className="flex flex-col items-center justify-center p-8">
+        <h3 className="text-lg font-medium text-white mb-3">Name Your Repository</h3>
         <p className="text-sm text-gray-400 mb-6 text-center max-w-xs">
           Provide a unique name to begin importing your repository
         </p>
         <div className="w-full max-w-md space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="repoName" className="text-gray-100 font-medium">
+            <Label htmlFor="repoName" className="text-gray-200 font-medium">
               Repository Name
             </Label>
             <Input
@@ -312,40 +291,34 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({ isOpen, onClose, onIm
               value={repoName}
               onChange={(e) => setRepoName(e.target.value)}
               placeholder="e.g., MyAwesomeProject"
-              className="bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              className="rgb(13 17 23 / 0.3) border-gray-600 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-md"
             />
           </div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button onClick={handleNextStep} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-              Next
-            </Button>
-          </motion.div>
+          <Button
+            onClick={handleNextStep}
+            className="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md"
+          >
+            Next
+          </Button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 
   const renderFileSelection = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="p-6 bg-gray-850 rounded-lg shadow-lg border border-gray-800"
-    >
-      <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-700">
-        <FolderGit2 className="h-10 w-10 text-blue-500" />
-        <h3 className="text-base font-semibold text-white mb-2">Select Repository Files for "{repoName}"</h3>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            onClick={handleFileUpload}
-            variant="secondary"
-            disabled={isSubmitting}
-            className="bg-gray-700 text-gray-100 hover:bg-gray-600 py-2 px-4 rounded-md"
-          >
-            <FileUp className="mr-2 h-4 w-4" />
-            Select Folder
-          </Button>
-        </motion.div>
+    <div className="p-6 rgb(13 17 23 / 0.3) rounded-lg border border-gray-600">
+      <div className="flex flex-col items-center justify-center p-6">
+        <FolderGit2 className="h-10 w-10 text-gray-400" />
+        <h3 className="text-base font-medium text-white mb-2">Select Repository Files for "{repoName}"</h3>
+        <Button
+          onClick={handleFileUpload}
+          variant="secondary"
+          disabled={isSubmitting}
+          className="rgb(13 17 23 / 0.3) text-gray-200 hover:bg-gray-600 py-2 px-4 rounded-md border border-gray-600"
+        >
+          <FileUp className="mr-2 h-4 w-4" />
+          Select Folder
+        </Button>
         <input
           type="file"
           ref={fileInputRef}
@@ -356,20 +329,19 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({ isOpen, onClose, onIm
           disabled={isSubmitting}
         />
       </div>
-    </motion.div>
+    </div>
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent
-        className={`${step === "vscode" || step === "loading" ? "max-w-[90vw] max-h-[90vh] p-0" : "sm:max-w-[425px]"} bg-gray-850 text-gray-100 border-gray-800 rounded-lg`}
+        className={`${step === "vscode" || step === "loading" ? "max-w-[90vw] max-h-[90vh] p-0" : "sm:max-w-[425px]"
+          } rgb(13 17 23 / 0.3) text-gray-200 border-gray-600 rounded-lg`}
       >
-        <AnimatePresence mode="wait">
-          {step === "name" && <motion.div key="name">{renderFancyInitialPopup()}</motion.div>}
-          {step === "files" && <motion.div key="files">{renderFileSelection()}</motion.div>}
-          {step === "vscode" && <motion.div key="vscode">{renderVSCodeInterface()}</motion.div>}
-          {step === "loading" && <motion.div key="loading">{renderLoadingState()}</motion.div>}
-        </AnimatePresence>
+        {step === "name" && renderInitialPopup()}
+        {step === "files" && renderFileSelection()}
+        {step === "vscode" && renderVSCodeInterface()}
+        {step === "loading" && renderLoadingState()}
       </DialogContent>
     </Dialog>
   );

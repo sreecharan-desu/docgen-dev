@@ -88,7 +88,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Settings className="h-12 w-12 mb-4 mx-auto text-blue-400" />
+          <Settings className="h-12 w-12 mb-4 mx-auto text-primary" />
           <h2 className="text-xl font-medium">Loading user information...</h2>
         </div>
       </div>
@@ -102,7 +102,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
           <Settings className="h-6 w-6" />
           Account Settings
         </h1>
-        <p className="text-gray-500">
+        <p className="text-muted-foreground">
           Manage your account settings and preferences
         </p>
       </div>
@@ -118,7 +118,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-6 items-center">
             <div>
-              <div className="h-24 w-24 rounded-full bg-black flex items-center justify-center">
+              <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center">
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
@@ -135,19 +135,19 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
 
             <div className="space-y-3 flex-1">
               <div>
-                <p className="text-xs text-gray-500">Member Since</p>
+                <p className="text-xs text-muted-foreground">Member Since</p>
                 <p className="text-sm">{formatDate(user.created_at)}</p>
               </div>
 
               <div>
-                <p className="text-xs text-gray-500">Email Status</p>
+                <p className="text-xs text-muted-foreground">Email Status</p>
                 <div>
                   {user.email_confirmed ? (
-                    <span className="bg-green-100 text-green-800 rounded-full px-2 py-1 text-xs">
+                    <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 rounded-full px-2 py-1 text-xs">
                       Verified
                     </span>
                   ) : (
-                    <span className="bg-yellow-100 text-yellow-800 rounded-full px-2 py-1 text-xs">
+                    <span className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 rounded-full px-2 py-1 text-xs">
                       Pending Verification
                     </span>
                   )}
@@ -174,9 +174,9 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
                 type="email"
                 value={user?.email || ""}
                 disabled
-                className="w-full p-2 rounded border bg-transparent text-gray-500"
+                className="w-full p-2 rounded border border-input bg-muted text-muted-foreground"
               />
-              <p className="text-xs font-semibold text-gray-500 mt-1">
+              <p className="text-xs font-semibold text-muted-foreground mt-1">
                 <b>*</b> Email cannot be changed
               </p>
             </div>
@@ -192,7 +192,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
                 value={formState.name}
                 onChange={handleInputChange}
                 disabled={!isEditing || isLoading}
-                className="w-full p-2 rounded border"
+                className="w-full p-2 rounded border border-input bg-background"
               />
             </div>
           </div>
