@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, PlusCircle, Users, FileText, X, Plus, File, Clock, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, PlusCircle, Users, FileText, X, Plus, File, Clock, ChevronRight, Download, Search } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/dashboard/Sidebar";
@@ -148,11 +148,11 @@ const ProjectRepositories = () => {
   // Fetch project and repositories data
   useEffect(() => {
 
-    if(localStorage.getItem("token")==undefined || localStorage.getItem("token") == null){
+    if (localStorage.getItem("token") == undefined || localStorage.getItem("token") == null) {
       navigate('/')
     }
     const fetchData = async () => {
-      if(localStorage.getItem("token")==undefined || localStorage.getItem("token") == null){
+      if (localStorage.getItem("token") == undefined || localStorage.getItem("token") == null) {
         navigate('/')
       }
       try {
@@ -323,7 +323,7 @@ const ProjectRepositories = () => {
 
     return (
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl bg-[#0d1117] text-[#c9d1d9] border border-[#30363d] rounded-lg p-0">
+        <DialogContent className="max-w-4xl bg-[#0d1117] text-[#c9d1d9] border  rounded-lg p-0">
           <div className="flex flex-col h-[80vh] w-full bg-[#0d1117] rounded-lg overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-3 bg-[#161b22] border-b border-[#30363d]">
@@ -401,11 +401,11 @@ const ProjectRepositories = () => {
   const renderContent = () => {
     switch (activeSection) {
       case "pricing":
-        navigate('/dashboard');break;
+        navigate('/dashboard'); break;
       case "projects":
-        navigate('/dashboard');break;
+        navigate('/dashboard'); break;
       case "settings":
-        navigate('/dashboard');break;
+        navigate('/dashboard'); break;
       case "docs":
         navigate("/docs");
         return null;
@@ -413,21 +413,7 @@ const ProjectRepositories = () => {
   };
 
   return (
-    <div className="flex h-screen rgb(13 17 23 / 0.3) text-gray-200 overflow-hidden">
-      <div style={{ width: isSidebarCollapsed ? "80px" : "250px" }} className="transition-width duration-300">
-        <Sidebar
-          isSidebarCollapsed={isSidebarCollapsed}
-          setIsSidebarCollapsed={setIsSidebarCollapsed}
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          user={user ? { ...user, avatarUrl: user.avatarUrl || "" } : null}
-          logout={logout}
-        />
-      </div>
-
-      {renderContent()}
-
-
+    <div className="flex h-screen rgb(13 17 23 / 0.3) text-gray-200 overflow-hidden mt-5">
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="border-b border-gray-700 p-4 flex items-center justify-between rgb(13 17 23 / 0.3)">
@@ -456,27 +442,38 @@ const ProjectRepositories = () => {
 
         {/* Main Content */}
         <main className="p-6 flex-1 overflow-y-auto rgb(13 17 23 / 0.3)">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-medium text-white">Manage your <b className="bg-gray-900 rounded-md px-3">{project.name}</b> repositories</h2>
+          <div className="flex justify-between items-center mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 w-full"
+                />
+
+                {searchTerm && (
+                  <X
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
+                    onClick={() => setSearchTerm("")}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Create Repo Button */}
             <Button
               onClick={() => setIsImportModalOpen(true)}
-              className="bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md flex items-center"
+              className="bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-all duration-200"
             >
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <PlusCircle className="h-4 w-4" />
               Create Repo
             </Button>
           </div>
 
-          <div className="flex justify-between items-center mb-6">
-            <Input
-              type="text"
-              placeholder="Search repositories..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-1/3 p-2 bg-[#2A3A3A] border border-gray-600 rounded-md text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
 
-          </div>
+
 
           {/* Repository Grid */}
           {filteredRepositories.length === 0 ? (
@@ -506,7 +503,7 @@ const ProjectRepositories = () => {
                   <div
                     key={repo.id}
                     onClick={() => handleRepoClick(repo)}
-                    className="bg-gradient-to-br bg-gray-900 rounded-xl p-5 cursor-pointer 
+                    className="bg-gradient-to-br rgb(13 14 22 / var(--tw-bg-opacity)) rounded-xl p-5 cursor-pointer 
             hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300 group shadow-md"
                   >
                     {/* Header */}

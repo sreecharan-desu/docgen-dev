@@ -61,22 +61,11 @@ const Dashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <div style={{ width: isSidebarCollapsed ? "80px" : "250px" }} className="transition-width duration-300">
-        <Sidebar
-          isSidebarCollapsed={isSidebarCollapsed}
-          setIsSidebarCollapsed={setIsSidebarCollapsed}
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          user={user ? { ...user, avatarUrl: user.avatarUrl || "" } : null}
-          logout={logout}
-        />
-      </div>
-
+      
       {/* Main content */}
       <div className="flex-1 relative">
         {/* Top navigation bar */}
-        <div className="md:hidden flex items-center justify-between mb-6 bg-background/95 fixed top-0 left-0 right-0 z-10 px-4 py-3 border-b border-muted">
+        <div className="md:hidden flex items-center justify-between mb-6 bg-background/95 fixed top-0 left-0 right-0 z-10 px-4 py-3">
           <Button
             variant="ghost"
             size="sm"
@@ -119,7 +108,7 @@ const Dashboard = () => {
           <div className="pb-12 relative">
             {/* Main content with skeleton loader */}
             <Suspense fallback={<SkeletonLoader />}>
-              <div className="relative z-10 bg-background rounded-lg border border-muted shadow-md">
+              <div className="relative z-10 bg-background rounded-lg shadow-md">
                 {renderContent()}
               </div>
             </Suspense>

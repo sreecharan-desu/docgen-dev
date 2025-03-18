@@ -96,7 +96,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto p-6">
+    <div className="space-y-8 max-w-4xl mx-auto p-6 mt-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
           <Settings className="h-6 w-6" />

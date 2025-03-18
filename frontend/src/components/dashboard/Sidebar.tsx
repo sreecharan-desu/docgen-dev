@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -7,7 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   FolderKanban,
   CreditCard,
@@ -17,29 +17,21 @@ import {
   HelpCircle,
   Link as LinkIcon,
 } from "lucide-react";
-import { User as UserType } from "@/types";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext" // Assuming correct path
 
-// Sidebar Props
-interface SidebarProps {
-  isSidebarCollapsed: boolean;
-  setIsSidebarCollapsed: (collapsed: boolean) => void;
-  activeSection: string;
-  setActiveSection: (section: string) => void;
-  user: UserType | null;
-  logout: () => void;
-}
-
-const Sidebar = ({
-  isSidebarCollapsed,
-  setIsSidebarCollapsed,
-  activeSection,
-  setActiveSection,
-  user,
-  logout,
-}: SidebarProps) => {
+const Sidebar = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth(); // Get user and logout from AuthContext
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+
+  // Redirect to home if user is logged in but no token exists
+  useEffect(() => {
+    if (user != null && (localStorage.getItem('token') == null || localStorage.getItem("token") === undefined)) {
+      navigate('/');
+    }
+  }, [user, navigate]); // Dependencies: user and navigate
 
   // Extracts user initials for AvatarFallback
   const getUserInitials = () => {
@@ -54,10 +46,10 @@ const Sidebar = ({
 
   // Sidebar navigation items
   const navItems = [
-    { id: "projects", label: "Projects", icon: FolderKanban },
-    { id: "pricing", label: "Pricing", icon: CreditCard },
-    { id: "settings", label: "Settings", icon: Settings },
-    { id: "docs", label: "Docs", icon: LinkIcon },
+    { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
+    { id: "pricing", label: "Pricing", icon: CreditCard, path: "/pricing" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
+    { id: "docs", label: "Docs", icon: LinkIcon, path: "/docs" },
   ];
 
   // Footer action items
@@ -83,39 +75,25 @@ const Sidebar = ({
     collapsed: { width: 72, transition: { duration: 0.3, ease: "easeInOut" } },
   };
 
-  const iconVariants = {
-    collapsed: { scale: 1.15 },
-    expanded: { scale: 1 },
-  };
-
-  const textVariants = {
-    collapsed: { opacity: 0, display: "none" },
-    expanded: { opacity: 1, display: "block", transition: { delay: 0.1 } },
-  };
-
   const togglerVariants = {
     initial: { rotate: 0 },
     hover: { scale: 1.1 },
     rotate: (isCollapsed: boolean) => ({ rotate: isCollapsed ? 180 : 0 }),
   };
 
-  const handleItemClick = (id: string) => {
-    setActiveSection(id);
-  };
-
   return (
     <motion.div
       className="border-r border-slate-200/20 dark:border-slate-800/40 h-screen sticky top-0 flex flex-col bg-white/5 dark:bg-slate-900/50 backdrop-blur-sm z-20"
-      initial="collapsed"
-      animate={isSidebarCollapsed ? "collapsed" : "expanded"}
+      initial="expanded"
+      animate={isCollapsed ? "collapsed" : "expanded"}
       variants={sidebarVariants}
     >
       {/* Sidebar Toggle Button */}
       <motion.button
         className="absolute -right-3 top-20 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-full p-1.5 shadow-md z-30"
-        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onClick={() => setIsCollapsed(!isCollapsed)}
         variants={togglerVariants}
-        custom={isSidebarCollapsed}
+        custom={isCollapsed}
         animate={["rotate", "initial"]}
         whileHover="hover"
         whileTap={{ scale: 0.9 }}
@@ -131,7 +109,7 @@ const Sidebar = ({
           className="h-10 w-10"
           whileHover={{ scale: 1.15, transition: { duration: 0.5 } }}
         />
-        {!isSidebarCollapsed && (
+        {!isCollapsed && (
           <motion.span
             className="font-semibold text-lg text-white"
             whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
@@ -149,7 +127,7 @@ const Sidebar = ({
             {getUserInitials()}
           </AvatarFallback>
         </Avatar>
-        {!isSidebarCollapsed && (
+        {!isCollapsed && (
           <motion.div className="text-center mt-2">
             <p className="font-medium dark:text-slate-200">
               {user?.name || "User"}
@@ -167,18 +145,19 @@ const Sidebar = ({
           <TooltipProvider key={item.id}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`w-full ${isSidebarCollapsed ? "justify-center px-0" : "justify-start"} relative h-10`}
-                  onClick={() => handleItemClick(item.id)}
-                >
-                  <item.icon
-                    className={`h-4 w-4 ${isSidebarCollapsed ? "" : "mr-3"}`}
-                  />
-                  {!isSidebarCollapsed && <span>{item.label}</span>}
-                </Button>
+                <Link to={item.path}>
+                  <Button
+                    variant="ghost"
+                    className={`w-full ${isCollapsed ? "justify-center px-0" : "justify-start"} relative h-10`}
+                  >
+                    <item.icon
+                      className={`h-4 w-4 ${isCollapsed ? "" : "mr-3"}`}
+                    />
+                    {!isCollapsed && <span>{item.label}</span>}
+                  </Button>
+                </Link>
               </TooltipTrigger>
-              {isSidebarCollapsed && (
+              {isCollapsed && (
                 <TooltipContent
                   side="right"
                   className="bg-slate-900 text-white border-slate-700"
@@ -201,7 +180,7 @@ const Sidebar = ({
             onClick={item.action}
           >
             <item.icon className="h-4 w-4 mr-3" />
-            {!isSidebarCollapsed && <span>{item.label}</span>}
+            {!isCollapsed && <span>{item.label}</span>}
           </Button>
         ))}
       </div>

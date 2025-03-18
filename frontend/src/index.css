@@ -243,3 +243,14 @@ pre code {
 .neon-cyan {
   color: #00FFFF;
 }
+
+/* In your global CSS or component-specific CSS */
+@media (min-width: 768px) { /* Adjust breakpoint as needed */
+  .sidebar + main {
+    margin-left: 0; /* Default for when sidebar isn't present */
+  }
+  
+  .sidebar {
+    min-width: 72px; /* collapsed width */
+  }
+}

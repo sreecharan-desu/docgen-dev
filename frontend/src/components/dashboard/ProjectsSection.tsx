@@ -9,6 +9,10 @@ import {
   ArrowUpRight,
   Search,
   Filter,
+  X,
+  MoreVertical,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { CREATE_PROJECT_API } from "@/utils/apis";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +42,11 @@ const components = {
   Alert: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.Alert }))),
   AlertDescription: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.AlertDescription }))),
   Badge: lazy(() => import("@/components/ui/badge").then((mod) => ({ default: mod.Badge }))),
+  DropdownMenu: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenu }))),
+  DropdownMenuTrigger: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuTrigger }))),
+  DropdownMenuContent: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuContent }))),
+  DropdownMenuItem: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuItem }))),
+  DropdownMenuSeparator: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuSeparator }))),
 };
 
 // Destructuring for cleaner usage
@@ -59,18 +68,27 @@ const {
   Alert,
   AlertDescription,
   Badge,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } = components;
 
 const ProjectsSection = () => {
   // State hooks
   const [open, setOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
+  const [newProjectName, setNewProjectName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [projects, setProjects] = useState([]);
   const [fetchingProjects, setFetchingProjects] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [selectedProject, setSelectedProject] = useState(null);
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -107,7 +125,7 @@ const ProjectsSection = () => {
       const data = await response.json();
       setProjects(data);
     } catch (err) {
-      setFetchError(err.message || `Error fetching projects. Please try again. ${<b className="underline" onClick={async()=>await fetchProjects()}>Retry</b>}`);
+      setFetchError(err.message || `Error fetching projects. Please try again. ${<b className="underline" onClick={async () => await fetchProjects()}>Retry</b>}`);
     } finally {
       setFetchingProjects(false);
     }
@@ -153,16 +171,92 @@ const ProjectsSection = () => {
     }
   };
 
+  const handleRenameProject = async () => {
+    if (!newProjectName.trim()) {
+      setError("Project name cannot be empty");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `https://api2.docgen.dev/api/v1/project/rename-project/${selectedProject.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            name: newProjectName,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok)
+        throw new Error(data.message || "Failed to rename project");
+
+      // Update the project in the local state
+      setProjects(projects.map(p => 
+        p.id === selectedProject.id 
+          ? { ...p, name: newProjectName } 
+          : p
+      ));
+
+      setRenameOpen(false);
+      setNewProjectName("");
+      setSelectedProject(null);
+    } catch (err) {
+      setError(err.message || "Error processing request. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `https://api2.docgen.dev/api/v1/project/delete-project/${selectedProject.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok)
+        throw new Error(data.message || "Failed to delete project");
+
+      // Remove the project from the local state
+      setProjects(projects.filter(p => p.id !== selectedProject.id));
+
+      setDeleteOpen(false);
+      setSelectedProject(null);
+    } catch (err) {
+      setError(err.message || "Error processing request. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatDate = (timestamp) => {
     if (!timestamp) return "N/A";
     const date = new Date(Number(timestamp));
     return isNaN(date.getTime())
       ? "N/A"
       : date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
   };
 
   const goToProject = (projectId) => {
@@ -173,12 +267,25 @@ const ProjectsSection = () => {
     }
   };
 
+  const openRenameDialog = (project, e) => {
+    e.stopPropagation();
+    setSelectedProject(project);
+    setNewProjectName(project.name);
+    setRenameOpen(true);
+  };
+
+  const openDeleteDialog = (project, e) => {
+    e.stopPropagation();
+    setSelectedProject(project);
+    setDeleteOpen(true);
+  };
+
   // Filter projects based on search and status
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
       project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
       project.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-    
+
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "active" && project.is_active !== false) ||
@@ -189,7 +296,7 @@ const ProjectsSection = () => {
 
   return (
     <Suspense fallback={<LoadingSpinner />}>
-      <div className="space-y-6 p-10">
+      <div className="space-y-6 p-10 mt-8">
         <header className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -203,18 +310,25 @@ const ProjectsSection = () => {
           </div>
 
           {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full"
-              />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 w-full"
+                />
+         
+                {searchTerm && (
+                  <X
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
+                    onClick={() => setSearchTerm("")}
+                  />
+                )}
+              </div>
             </div>
-            
-          </div>
+
         </header>
 
         {/* Error Alert */}
@@ -241,7 +355,26 @@ const ProjectsSection = () => {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex justify-between items-center text-lg font-semibold text-foreground">
                       <span className="truncate">{project.name}</span>
-                      <ArrowUpRight className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1" />
+                      <Suspense fallback={<div className="h-5 w-5"></div>}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={e => openRenameDialog(project, e)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={e => openDeleteDialog(project, e)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Suspense>
                     </CardTitle>
                     <CardDescription className="truncate text-muted-foreground text-sm">
                       {project.description}
@@ -322,6 +455,81 @@ const ProjectsSection = () => {
                   disabled={isLoading}
                 >
                   {isLoading ? "Creating..." : "Create"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Suspense>
+        </Dialog>
+
+        {/* Rename Project Dialog */}
+        <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Rename Project</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <InputField
+                  label="New Name"
+                  value={newProjectName}
+                  setValue={setNewProjectName}
+                />
+                {error && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button" disabled={isLoading}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  onClick={handleRenameProject}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Renaming..." : "Rename"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Suspense>
+        </Dialog>
+
+        {/* Delete Project Dialog */}
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Delete Project</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-muted-foreground">
+                  Are you sure you want to delete project <span className="font-semibold">{selectedProject?.name}</span>? This action cannot be undone.
+                </p>
+                {error && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button" disabled={isLoading}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteProject}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Deleting..." : "Delete"}
                 </Button>
               </DialogFooter>
             </DialogContent>
