@@ -256,8 +256,8 @@ const UPDATE_REPO_API = async (repo_id, updateData, token) => {
   return await response.json();
 };
 
-const DELETE_REPO_API = async (repoId, token) => {
-  const response = await fetch(`${BASE_URL}/delete-repository/${repoId}`, {
+const DELETE_REPO_API = async (repo_id, token) => {
+  const response = await fetch(`${BASE_URL}/repositories/delete-repository/${repo_id}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -751,7 +751,7 @@ const ProjectPage = () => {
                             <Input
                               value={localFolderName}
                               readOnly
-                              className="col-span-3 bg-gray-100 cursor-not-allowed"
+                              className="col-span-3 bg-transparent cursor-not-allowed"
                             />
                           </div>
                         </div>
