@@ -24,17 +24,21 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth(); // Get user and logout from AuthContext
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hoveredItem, setHoveredItem] = useState(null);
 
   // Redirect to home if user is logged in but no token exists
   useEffect(() => {
     if (user != null && (localStorage.getItem('token') == null || localStorage.getItem("token") === undefined)) {
       navigate('/');
     }
-    console.log(window.location)
-    if(window.location.pathname.startsWith('/repo')){
-      setIsCollapsed(true)
+
+    if (window.location.pathname.startsWith('/repo')) {
+      setIsCollapsed(true);
     }
+
+    // Simulate loading state - set to false when user data is fully loaded
+    setIsLoading(user === null || user === undefined);
   }, [user, navigate]); // Dependencies: user and navigate
 
   // Extracts user initials for AvatarFallback
@@ -82,8 +86,21 @@ const Sidebar = () => {
   const togglerVariants = {
     initial: { rotate: 0 },
     hover: { scale: 1.1 },
-    rotate: (isCollapsed: boolean) => ({ rotate: isCollapsed ? 180 : 0 }),
+    rotate: (isCollapsed) => ({ rotate: isCollapsed ? 180 : 0 }),
   };
+
+  // Skeleton component for the user info
+  const UserSkeleton = () => (
+    <div className="animate-pulse flex flex-col items-center">
+      <div className="h-12 w-12 rounded-full bg-slate-700 mb-2"></div>
+      {!isCollapsed && (
+        <>
+          <div className="h-4 w-24 bg-slate-700 rounded mb-2"></div>
+          <div className="h-3 w-20 bg-slate-700/70 rounded"></div>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <motion.div
@@ -110,36 +127,43 @@ const Sidebar = () => {
         <motion.img
           src="/docgen-logo.png"
           alt="DocGen Logo"
-          className="h-10 w-10"
+          className="h-10 w-10 flex-shrink-0" // Added flex-shrink-0 to prevent squishing
           whileHover={{ scale: 1.15, transition: { duration: 0.5 } }}
         />
         {!isCollapsed && (
           <motion.span
-            className="font-semibold text-lg text-white"
+            className="font-semibold -mt-1 text-lg text-white truncate" // Added truncate for overflow control
             whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
           >
             DocGen
           </motion.span>
         )}
       </Link>
-
-      {/* User Avatar */}
+      {/* User Avatar Section with Skeleton */}
       <motion.div className="p-4 border-b border-slate-200/20 dark:border-slate-800/40 flex flex-col items-center">
-        <Avatar className="h-12 w-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background text-white">
-          <AvatarImage src={user?.avatarUrl || ""} alt={user?.name || "User"} />
-          <AvatarFallback className="bg-[#00ff9d] text-white">
-            {getUserInitials()}
-          </AvatarFallback>
-        </Avatar>
-        {!isCollapsed && (
-          <motion.div className="text-center mt-2">
-            <p className="font-medium dark:text-slate-200">
-              {user?.name || "User"}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {user?.email || "No email"}
-            </p>
-          </motion.div>
+        {isLoading ? (
+          <UserSkeleton />
+        ) : (
+          <>
+            <Avatar className="h-12 w-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background text-white">
+              <AvatarImage src={user?.avatarUrl || ""} alt={user?.name || "User"} />
+              <AvatarFallback className="bg-[#00ff9d] text-white">
+                {getUserInitials()}
+              </AvatarFallback>
+            </Avatar>
+            {!isCollapsed && (
+              <motion.div className="text-center mt-2">
+                <p className="font-medium dark:text-slate-200">
+                  {user?.name || <div className="h-3 w-20 bg-slate-600/40 rounded mx-auto mt-1"></div>
+                  }
+                </p>
+                <p className="font-small text-sm dark:text-slate-200">
+                  {user?.email || <div className="h-3 w-20 bg-slate-600/40 rounded mx-auto mt-1"></div>
+                  }
+                </p>
+              </motion.div>
+            )}
+          </>
         )}
       </motion.div>
 
@@ -177,15 +201,29 @@ const Sidebar = () => {
       {/* Footer Actions */}
       <div className="p-3 border-t border-slate-200/20 dark:border-slate-800/40 space-y-1.5">
         {footerItems.map((item) => (
-          <Button
-            key={item.id}
-            variant="ghost"
-            className="w-full justify-start h-10"
-            onClick={item.action}
-          >
-            <item.icon className="h-4 w-4 mr-3" />
-            {!isCollapsed && <span>{item.label}</span>}
-          </Button>
+          <TooltipProvider key={item.id}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className={`w-full ${isCollapsed ? "justify-center px-0" : "justify-start"} h-10`}
+                  onClick={item.action}
+                >
+                  <item.icon className={`h-4 w-4 ${isCollapsed ? "" : "mr-3"}`} />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </Button>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent
+                  side="right"
+                  className="bg-slate-900 text-white border-slate-700"
+                >
+                  {item.label}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         ))}
       </div>
     </motion.div>

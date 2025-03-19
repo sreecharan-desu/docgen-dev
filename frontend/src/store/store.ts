@@ -2,5 +2,11 @@ import { atom } from "recoil";
 
 export const projectAtom = atom({
   key: "projectAtom", 
-  default: null, 
+  default: [], 
 });
+
+export const projectsAtom = atom({
+  key: "projectsAtom", 
+  default: [], 
+});
+

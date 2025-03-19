@@ -11,14 +11,14 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { projectAtom } from "@/store/store";
-import { useSetRecoilState } from "recoil";
+import { useNavigate, useLocation } from "react-router-dom";
+import { projectAtom, projectsAtom } from "@/store/store";
+import { useSetRecoilState, useRecoilState } from "recoil";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDebounce } from "use-debounce";
 
-// Lazy loading UI components (unchanged)
 const components = {
   Button: lazy(() => import("@/components/ui/button").then((mod) => ({ default: mod.Button }))),
   Input: lazy(() => import("@/components/ui/input").then((mod) => ({ default: mod.Input }))),
@@ -45,7 +45,6 @@ const components = {
   DropdownMenuSeparator: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuSeparator }))),
 };
 
-// Destructuring for cleaner usage (unchanged)
 const {
   Button,
   Input,
@@ -72,11 +71,8 @@ const {
   DropdownMenuSeparator,
 } = components;
 
-// API Base URL
 const BASE_URL = "https://api2.docgen.dev/api/v1/project";
 
-
-// API Functions
 const fetchProjects = async (token) => {
   const response = await fetch(`${BASE_URL}/list-projects`, {
     method: "GET",
@@ -137,7 +133,6 @@ const deleteProject = async (projectId, token) => {
 };
 
 const ProjectsSection = () => {
-  // State hooks (unchanged)
   const [open, setOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -146,38 +141,64 @@ const ProjectsSection = () => {
   const [newProjectName, setNewProjectName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [projects, setProjects] = useState([]);
-  const [fetchingProjects, setFetchingProjects] = useState(true);
+  const [fetchingProjects, setFetchingProjects] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [selectedProject, setSelectedProject] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [shouldRefetch, setShouldRefetch] = useState(false);
+
+  const [projects, setProjects] = useRecoilState(projectsAtom);
+  const setProject = useSetRecoilState(projectAtom);
 
   const { user } = useAuth();
   const navigateTo = useNavigate();
-  const setProject = useSetRecoilState(projectAtom);
+  const location = useLocation();
   const token = localStorage.getItem("token");
 
-  // Fetch projects on component mount
-  useEffect(() => {
-    const getProjects = async () => {
-      setFetchingProjects(true);
-      setFetchError("");
-      try {
-        const data = await fetchProjects(token);
-        setProjects(data);
-      } catch (err) {
-        setFetchError(
-          `Error fetching projects. Please try again.`
-        );
+  const getProjects = async () => {
+    if (!token) {
+      navigateTo("/");
+      return;
+    }
 
-      } finally {
-        setFetchingProjects(false);
-      }
-    };
-    if (token) getProjects();
-    else navigateTo("/"); // Redirect if no token
-  }, [token, navigateTo]);
+    setFetchingProjects(true);
+    setFetchError("");
+    try {
+      const data = await fetchProjects(token);
+      setProjects(data);
+    } catch (err) {
+      setFetchError(`Error fetching projects. Please try again.`);
+    } finally {
+      setFetchingProjects(false);
+      setShouldRefetch(false);
+    }
+  };
+
+  const retryFetchProjects = () => {
+    getProjects();
+  };
+
+  const retryCreateProject = () => {
+    handleCreateProject();
+  };
+
+  const retryRenameProject = () => {
+    handleRenameProject();
+  };
+
+  const retryDeleteProject = () => {
+    handleDeleteProject();
+  };
+
+  useEffect(() => {
+    const isFirstRender = !projects || projects.length === 0;
+    const isPageReload = performance.navigation && performance.navigation.type === 1;
+
+    if (isFirstRender || isPageReload || shouldRefetch) {
+      getProjects();
+    }
+  }, [token, shouldRefetch]);
 
   const handleCreateProject = async () => {
     if (!projectName.trim() || !projectDescription.trim()) {
@@ -194,6 +215,8 @@ const ProjectsSection = () => {
         owner_id: user?.id,
       };
       const newProject = await createProject(projectData, token);
+
+      setProjects(prevProjects => [...prevProjects, newProject]);
       setProject(newProject);
       navigateTo(`/project/${newProject.id}`);
       setOpen(false);
@@ -216,9 +239,9 @@ const ProjectsSection = () => {
     setError("");
     try {
       const updatedProject = await renameProject(selectedProject.id, newProjectName, token);
-      setProjects(projects.map((p) =>
-        p.id === selectedProject.id ? updatedProject : p
-      ));
+      setProjects(prevProjects =>
+        prevProjects.map(p => p.id === selectedProject.id ? updatedProject : p)
+      );
       setRenameOpen(false);
       setNewProjectName("");
       setSelectedProject(null);
@@ -234,7 +257,9 @@ const ProjectsSection = () => {
     setError("");
     try {
       await deleteProject(selectedProject.id, token);
-      setProjects(projects.filter((p) => p.id !== selectedProject.id));
+      setProjects(prevProjects =>
+        prevProjects.filter(p => p.id !== selectedProject.id)
+      );
       setDeleteOpen(false);
       setSelectedProject(null);
     } catch (err) {
@@ -277,13 +302,15 @@ const ProjectsSection = () => {
     setDeleteOpen(true);
   };
 
-  // Filter projects based on search (removed status filter as it's not used with new APIs)
+  const handleManualRefresh = () => {
+    setShouldRefetch(true);
+  };
+
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
     project.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
-  // UI remains completely unchanged
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <div className="space-y-6 p-10 mt-8">
@@ -293,10 +320,15 @@ const ProjectsSection = () => {
               <h1 className="text-3xl font-bold mb-2">Projects</h1>
               <p className="text-muted-foreground">Manage your DocGen projects</p>
             </div>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Project
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleManualRefresh} disabled={fetchingProjects}>
+                {fetchingProjects ? "Refreshing..." : <RefreshCw />}
+              </Button>
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Project
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -321,7 +353,19 @@ const ProjectsSection = () => {
         {fetchError && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4 mr-2" />
-            <AlertDescription dangerouslySetInnerHTML={{ __html: fetchError }} />
+            <AlertDescription>
+              {fetchError}
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-4"
+                onClick={retryFetchProjects}
+                disabled={fetchingProjects}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </AlertDescription>
           </Alert>
         )}
 
@@ -421,8 +465,20 @@ const ProjectsSection = () => {
                 />
                 {error && (
                   <Alert variant="destructive" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <AlertDescription>
+                      {error}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-4"
+                        onClick={retryCreateProject}
+                        disabled={isLoading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Retry
+                      </Button>
+                    </AlertDescription>
                   </Alert>
                 )}
               </div>
@@ -458,8 +514,20 @@ const ProjectsSection = () => {
                 />
                 {error && (
                   <Alert variant="destructive" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <AlertDescription>
+                      {error}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-4"
+                        onClick={retryRenameProject}
+                        disabled={isLoading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Retry
+                      </Button>
+                    </AlertDescription>
                   </Alert>
                 )}
               </div>
@@ -493,8 +561,20 @@ const ProjectsSection = () => {
                 </p>
                 {error && (
                   <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    <AlertDescription>
+                      {error}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-4"
+                        onClick={retryDeleteProject}
+                        disabled={isLoading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Retry
+                      </Button>
+                    </AlertDescription>
                   </Alert>
                 )}
               </div>
@@ -521,7 +601,6 @@ const ProjectsSection = () => {
   );
 };
 
-// Reusable components remain unchanged
 const InputField = ({ label, value, setValue }) => (
   <div className="grid grid-cols-4 items-center gap-4">
     <Label className="text-right">{label}</Label>
@@ -550,8 +629,8 @@ const ProjectsGridSkeleton = () => (
             <div className="h-4 bg-gray-300 rounded w-1/2"></div>
           </div>
           <div className="flex justify-between pt-2">
-            <div className="h-6 bg-gray-300 rounded w-1/4"></div>
-            <div className="h-6 bg-gray-300 rounded w-1/4"></div>
+            <div className="h-6 alegreya-sans-300 rounded w-1/4"></div>
+            <div className="h-6 alegreya-sans-300 rounded w-1/4"></div>
           </div>
         </div>
       </div>
