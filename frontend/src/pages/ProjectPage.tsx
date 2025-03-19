@@ -20,29 +20,99 @@ import { useDebounce } from "use-debounce";
 
 // Lazy-loaded UI components (unchanged)
 const components = {
-  Button: lazy(() => import("@/components/ui/button").then((mod) => ({ default: mod.Button }))),
-  Input: lazy(() => import("@/components/ui/input").then((mod) => ({ default: mod.Input }))),
-  Label: lazy(() => import("@/components/ui/label").then((mod) => ({ default: mod.Label }))),
-  Card: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.Card }))),
-  CardContent: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardContent }))),
-  CardHeader: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardHeader }))),
-  CardTitle: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardTitle }))),
-  CardDescription: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardDescription }))),
-  CardFooter: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardFooter }))),
-  Dialog: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))),
-  DialogContent: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogContent }))),
-  DialogHeader: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogHeader }))),
-  DialogTitle: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogTitle }))),
-  DialogFooter: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogFooter }))),
-  DialogClose: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogClose }))),
-  Alert: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.Alert }))),
-  AlertDescription: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.AlertDescription }))),
-  Badge: lazy(() => import("@/components/ui/badge").then((mod) => ({ default: mod.Badge }))),
-  DropdownMenu: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenu }))),
-  DropdownMenuTrigger: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuTrigger }))),
-  DropdownMenuContent: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuContent }))),
-  DropdownMenuItem: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuItem }))),
-  DropdownMenuSeparator: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuSeparator }))),
+  Button: lazy(() =>
+    import("@/components/ui/button").then((mod) => ({ default: mod.Button }))
+  ),
+  Input: lazy(() =>
+    import("@/components/ui/input").then((mod) => ({ default: mod.Input }))
+  ),
+  Label: lazy(() =>
+    import("@/components/ui/label").then((mod) => ({ default: mod.Label }))
+  ),
+  Card: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.Card }))
+  ),
+  CardContent: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardContent }))
+  ),
+  CardHeader: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardHeader }))
+  ),
+  CardTitle: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardTitle }))
+  ),
+  CardDescription: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({
+      default: mod.CardDescription,
+    }))
+  ),
+  CardFooter: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardFooter }))
+  ),
+  Dialog: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))
+  ),
+  DialogContent: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogContent,
+    }))
+  ),
+  DialogHeader: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogHeader,
+    }))
+  ),
+  DialogTitle: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogTitle,
+    }))
+  ),
+  DialogFooter: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogFooter,
+    }))
+  ),
+  DialogClose: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogClose,
+    }))
+  ),
+  Alert: lazy(() =>
+    import("@/components/ui/alert").then((mod) => ({ default: mod.Alert }))
+  ),
+  AlertDescription: lazy(() =>
+    import("@/components/ui/alert").then((mod) => ({
+      default: mod.AlertDescription,
+    }))
+  ),
+  Badge: lazy(() =>
+    import("@/components/ui/badge").then((mod) => ({ default: mod.Badge }))
+  ),
+  DropdownMenu: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenu,
+    }))
+  ),
+  DropdownMenuTrigger: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuTrigger,
+    }))
+  ),
+  DropdownMenuContent: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuContent,
+    }))
+  ),
+  DropdownMenuItem: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuItem,
+    }))
+  ),
+  DropdownMenuSeparator: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuSeparator,
+    }))
+  ),
 };
 
 const {
@@ -84,7 +154,11 @@ const GET_PROJECT_API = async (projectId, token) => {
   });
   if (!response.ok) throw new Error("Failed to fetch project data");
   const data = await response.json();
-  return { name: data.name, id: data.id, collaborators: data.collaborator_count };
+  return {
+    name: data.name,
+    id: data.id,
+    collaborators: data.collaborator_count,
+  };
 };
 
 const GET_REPOS_API = async (projectId, token) => {
@@ -111,7 +185,9 @@ const CREATE_REPO_API = async (projectId, repoData, token) => {
       name: repoData.name,
       source: "github",
       repo_url: repoData.url,
-      storage_path: `/repos/${projectId}/${repoData.name.toLowerCase().replace(/\s+/g, '-')}`,
+      storage_path: `/repos/${projectId}/${repoData.name
+        .toLowerCase()
+        .replace(/\s+/g, "-")}`,
       created_at: new Date().toISOString(),
       last_generated_at: null,
       last_generated_by: null,
@@ -187,7 +263,7 @@ const ProjectPage = () => {
           GET_PROJECT_API(projectId, JWT_TOKEN),
           // GET_REPOS_API(projectId, JWT_TOKEN),
         ]);
-        console.log(projectData)
+        console.log(projectData);
         setProject(projectData);
         // setRepositories(repoData);
       } catch (err) {
@@ -231,7 +307,11 @@ const ProjectPage = () => {
     setIsLoading(true);
     setError("");
     try {
-      const updatedRepo = await UPDATE_REPO_API(selectedRepo.id, { name: newRepoName }, JWT_TOKEN);
+      const updatedRepo = await UPDATE_REPO_API(
+        selectedRepo.id,
+        { name: newRepoName },
+        JWT_TOKEN
+      );
       setRepositories((prev) =>
         prev.map((r) => (r.id === selectedRepo.id ? updatedRepo : r))
       );
@@ -269,7 +349,11 @@ const ProjectPage = () => {
     const date = new Date(timestamp);
     return isNaN(date.getTime())
       ? "N/A"
-      : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+      : date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
   };
 
   // Navigate to repository details
@@ -293,9 +377,11 @@ const ProjectPage = () => {
   };
 
   // Filter repositories (unchanged)
-  const filteredRepos = repositories.filter((repo) =>
-    repo.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-    (repo.repo_url && repo.repo_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
+  const filteredRepos = repositories.filter(
+    (repo) =>
+      repo.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      (repo.repo_url &&
+        repo.repo_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
   );
 
   // UI remains completely unchanged
@@ -305,8 +391,12 @@ const ProjectPage = () => {
         <header className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">{project?.name || "Repositories"}</h1>
-              <p className="text-muted-foreground">Manage your project repositories</p>
+              <h1 className="text-3xl font-bold mb-2">
+                {project?.name || "Repositories"}
+              </h1>
+              <p className="text-muted-foreground">
+                Manage your project repositories
+              </p>
             </div>
             <Button onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -356,18 +446,30 @@ const ProjectPage = () => {
                       <span className="truncate">{repo.name}</span>
                       <Suspense fallback={<div className="h-5 w-5"></div>}>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => openRenameDialog(repo, e)}>
+                            <DropdownMenuItem
+                              onClick={(e) => openRenameDialog(repo, e)}
+                            >
                               <Pencil className="h-4 w-4 mr-2" />
                               Rename
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={(e) => openDeleteDialog(repo, e)}>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => openDeleteDialog(repo, e)}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -386,20 +488,28 @@ const ProjectPage = () => {
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="h-4 w-4 mr-1 text-primary" />
-                      <div>Updated: {formatDate(repo.last_generated_at) || "Never"}</div>
+                      <div>
+                        Updated: {formatDate(repo.last_generated_at) || "Never"}
+                      </div>
                     </div>
                   </CardContent>
                   <CardFooter className="pt-2 border-t border-border bg-muted/40 rounded-b-2xl">
                     <div className="flex justify-between w-full text-sm">
                       <div className="flex items-center gap-1">
                         <GitBranch className="h-4 w-4 text-primary" />
-                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                        <Badge
+                          variant="outline"
+                          className="px-2 py-1 text-xs font-medium"
+                        >
                           N/A files
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-primary" />
-                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                        <Badge
+                          variant="outline"
+                          className="px-2 py-1 text-xs font-medium"
+                        >
                           {project?.collaborators || 0} collaborators
                         </Badge>
                       </div>
@@ -424,7 +534,11 @@ const ProjectPage = () => {
                 <DialogTitle>Create New Repository</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <InputField label="Name" value={repoName} setValue={setRepoName} />
+                <InputField
+                  label="Name"
+                  value={repoName}
+                  setValue={setRepoName}
+                />
                 <InputField label="URL" value={repoUrl} setValue={setRepoUrl} />
                 {error && (
                   <Alert variant="destructive" className="mt-2">
@@ -458,7 +572,11 @@ const ProjectPage = () => {
                 <DialogTitle>Rename Repository</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <InputField label="New Name" value={newRepoName} setValue={setNewRepoName} />
+                <InputField
+                  label="New Name"
+                  value={newRepoName}
+                  setValue={setNewRepoName}
+                />
                 {error && (
                   <Alert variant="destructive" className="mt-2">
                     <AlertCircle className="h-4 w-4" />
@@ -493,7 +611,8 @@ const ProjectPage = () => {
               <div className="py-4">
                 <p className="text-muted-foreground">
                   Are you sure you want to delete repository{" "}
-                  <span className="font-semibold">{selectedRepo?.name}</span>? This action cannot be undone.
+                  <span className="font-semibold">{selectedRepo?.name}</span>?
+                  This action cannot be undone.
                 </p>
                 {error && (
                   <Alert variant="destructive" className="mt-4">

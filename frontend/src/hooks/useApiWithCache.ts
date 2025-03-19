@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Cache } from '@/lib/cache';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
+import { Cache } from "@/lib/cache";
 
 interface UseApiWithCacheOptions {
   cacheKey: string;
@@ -7,7 +8,11 @@ interface UseApiWithCacheOptions {
   enabled?: boolean;
 }
 
-export function useApiWithCache<T>({ cacheKey, fetchFn, enabled = true }: UseApiWithCacheOptions) {
+export function useApiWithCache<T>({
+  cacheKey,
+  fetchFn,
+  enabled = true,
+}: UseApiWithCacheOptions) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -30,7 +35,7 @@ export function useApiWithCache<T>({ cacheKey, fetchFn, enabled = true }: UseApi
         Cache.set(cacheKey, result);
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('An error occurred'));
+        setError(err instanceof Error ? err : new Error("An error occurred"));
       } finally {
         setIsLoading(false);
       }
@@ -48,11 +53,11 @@ export function useApiWithCache<T>({ cacheKey, fetchFn, enabled = true }: UseApi
       Cache.set(cacheKey, result);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('An error occurred'));
+      setError(err instanceof Error ? err : new Error("An error occurred"));
     } finally {
       setIsLoading(false);
     }
   };
 
   return { data, isLoading, error, refetch };
-} 
+}

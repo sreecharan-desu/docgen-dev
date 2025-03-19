@@ -3,7 +3,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Menu, Home, ChevronRight } from "lucide-react";
 import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import Sidebar from "@/components/dashboard/Sidebar";
 import BillingSection from "@/components/dashboard/BillingSection";
 import SettingsSection from "@/components/dashboard/SettingsSection";
 import ProjectsSection from "@/components/dashboard/ProjectsSection";
@@ -61,30 +60,23 @@ const Dashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      
       {/* Main content */}
       <div className="flex-1 relative">
         {/* Top navigation bar */}
         <div className="md:hidden flex items-center justify-between mb-6 bg-background/95 fixed top-0 left-0 right-0 z-10 px-4 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-1.5"
-          >
+          <Button variant="ghost" size="sm" className="p-1.5">
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-1.5 relative"
-            >
+            <Button variant="ghost" size="sm" className="p-1.5 relative">
               <Bell className="h-5 w-5" />
               <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
             </Button>
             <Avatar className="h-8 w-8 ring-1 ring-muted">
               <AvatarImage
-                src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.name || user?.email || "User"}`}
+                src={`https://api.dicebear.com/7.x/initials/svg?seed=${
+                  user?.name || user?.email || "User"
+                }`}
               />
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {getUserInitials()}

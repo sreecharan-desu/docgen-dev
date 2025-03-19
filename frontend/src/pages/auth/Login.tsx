@@ -24,7 +24,7 @@ export default function Login() {
   useEffect(() => {
     const location = window.location.pathname;
     if (location == "/auth/login" && localStorage.getItem("token")) {
-      window.location.pathname = "/dashboard"
+      window.location.pathname = "/dashboard";
     }
   }, []);
 

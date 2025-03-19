@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             "Content-Type": "application/json",
             Origin: window.location.origin,
           },
-        },
+        }
       );
 
       if (!configResponse.ok) {
@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             "Content-Type": "application/json",
             Origin: window.location.origin,
           },
-        },
+        }
       );
 
       if (!configResponse.ok) {

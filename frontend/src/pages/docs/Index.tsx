@@ -67,7 +67,7 @@ const DocsPage = () => {
         className={cn(
           "fixed left-0 top-[64px] sm:top-[72px] h-[calc(100vh-64px)] sm:h-[calc(100vh-72px)] w-64 bg-[#111111] border-r border-[#1F1F1F] overflow-y-auto transition-transform duration-300 z-40",
           "md:translate-x-0",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="p-6">
@@ -84,7 +84,7 @@ const DocsPage = () => {
                     "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
                     activeSection === item.href.replace("#", "")
                       ? "bg-emerald-500/10 text-emerald-500"
-                      : "text-gray-400 hover:text-white hover:bg-[#1F1F1F]",
+                      : "text-gray-400 hover:text-white hover:bg-[#1F1F1F]"
                   )}
                   onClick={() => {
                     setActiveSection(item.href.replace("#", ""));
@@ -102,7 +102,7 @@ const DocsPage = () => {
                       "flex items-center gap-2 pl-9 py-2 text-sm rounded-md transition-colors",
                       activeSection === subItem.href.replace("#", "")
                         ? "text-emerald-500"
-                        : "text-gray-500 hover:text-gray-300",
+                        : "text-gray-500 hover:text-gray-300"
                     )}
                     onClick={() => {
                       setActiveSection(subItem.href.replace("#", ""));

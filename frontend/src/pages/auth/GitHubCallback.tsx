@@ -2,8 +2,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { API_URL, GITHUB_CALLBACK_URL } from "@/utils/config";
-import { GITHUB_CODE_EXCHANGE_API } from "@/utils/apis";
+import { GITHUB_CALLBACK_URL } from "@/utils/config";
 
 // Define GitHub operation types
 type GithubOperation = "auth" | "repo-import" | "repo-access";
@@ -16,11 +15,11 @@ interface StateData {
 
 export default function GitHubCallback() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading",
+    "loading"
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>(
-    "Processing GitHub authorization...",
+    "Processing GitHub authorization..."
   );
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -88,7 +87,7 @@ export default function GitHubCallback() {
               headers: {
                 Authorization: `Bearer ${token}`,
               },
-            },
+            }
           );
 
           if (!response.ok) {
@@ -102,7 +101,7 @@ export default function GitHubCallback() {
           window.history.replaceState(
             {},
             document.title,
-            stateData.returnPath || "/dashboard",
+            stateData.returnPath || "/dashboard"
           );
           navigate(stateData.returnPath || "/dashboard", { replace: true });
           return;
@@ -132,7 +131,7 @@ export default function GitHubCallback() {
           if (!response.ok) {
             const errorData = await response.json();
             throw new Error(
-              errorData.message || "Failed to exchange GitHub code",
+              errorData.message || "Failed to exchange GitHub code"
             );
           }
 
@@ -176,7 +175,7 @@ export default function GitHubCallback() {
 
         // If we get here, we're still waiting for the token or something went wrong
         console.log(
-          "GitHubCallback: No token or code found in URL, waiting or error",
+          "GitHubCallback: No token or code found in URL, waiting or error"
         );
 
         // After a timeout, redirect if no token/code is received

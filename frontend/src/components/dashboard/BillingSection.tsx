@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
   CheckCircle2,
-  HelpCircle,
-  CreditCard,
   ChevronDown,
   Sparkles,
   Shield,
@@ -427,7 +425,9 @@ const BillingSection = () => {
               >
                 {faq.question}
                 <ChevronDown
-                  className={`w-5 h-5 transition-transform ${expandedFaq === index ? "rotate-180" : ""}`}
+                  className={`w-5 h-5 transition-transform ${
+                    expandedFaq === index ? "rotate-180" : ""
+                  }`}
                 />
               </button>
               <AnimatePresence>

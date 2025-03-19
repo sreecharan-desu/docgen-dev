@@ -7,5 +7,3 @@ export const DELETE_SINGLE_PROJECT_API = 'https://api2.docgen.dev/api/v1/project
 export const IMPORT_GITHUB_REPO_API = ''
 export const UPLOAD_LOCAL_FILES_API = ''
 export const GITHUB_CODE_EXCHANGE_API = ''
-
-

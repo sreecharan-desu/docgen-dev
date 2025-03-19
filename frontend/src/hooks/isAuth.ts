@@ -9,13 +9,16 @@ export default function useIsAuth() {
   useEffect(() => {
     if (!token && location.pathname === "/auth/login") {
       navigate("/auth/login", { replace: true });
-    }
-    else if (!token) {
+    } else if (!token) {
       navigate("/", { replace: true });
-    }
-    else if (token && (location.pathname === "/auth/login" || location.pathname === "/auth/register" || location.pathname === "/")) {
+    } else if (
+      token &&
+      (location.pathname === "/auth/login" ||
+        location.pathname === "/auth/register" ||
+        location.pathname === "/")
+    ) {
       navigate("/dashboard", { replace: true });
-    }else {
+    } else {
       navigate(location.pathname, { replace: true });
     }
   }, [token, location.pathname, navigate]); // Runs only when token or location changes

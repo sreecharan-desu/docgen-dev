@@ -18,11 +18,27 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Lazy-loaded UI components
 const components = {
-  Button: lazy(() => import("@/components/ui/button").then((mod) => ({ default: mod.Button }))),
-  Dialog: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))),
-  DialogContent: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogContent }))),
-  DialogHeader: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogHeader }))),
-  DialogTitle: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogTitle }))),
+  Button: lazy(() =>
+    import("@/components/ui/button").then((mod) => ({ default: mod.Button }))
+  ),
+  Dialog: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))
+  ),
+  DialogContent: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogContent,
+    }))
+  ),
+  DialogHeader: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogHeader,
+    }))
+  ),
+  DialogTitle: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogTitle,
+    }))
+  ),
 };
 
 const { Button, Dialog, DialogContent, DialogHeader, DialogTitle } = components;
@@ -55,7 +71,9 @@ const GENERATE_DOCS_API = async (repo) => {
 This is a clean, minimalistic documentation for the ${repo.name} repository.
 
 ## Files
-${repo.files.map((file) => `- **${file}**: Automatically generated description`).join("\n")}
+${repo.files
+  .map((file) => `- **${file}**: Automatically generated description`)
+  .join("\n")}
 
 ## Usage
 \`\`\`javascript
@@ -109,7 +127,12 @@ const RepoPage = () => {
     setIsGeneratingDocs(true);
     setProgress(0);
 
-    const steps = ["Reading files...", "Cleaning data...", "Extracting insights...", "Generating documentation..."];
+    const steps = [
+      "Reading files...",
+      "Cleaning data...",
+      "Extracting insights...",
+      "Generating documentation...",
+    ];
     for (let i = 0; i < steps.length; i++) {
       toast.info(steps[i]);
       setProgress(((i + 1) / steps.length) * 100);
@@ -119,8 +142,16 @@ const RepoPage = () => {
     try {
       const docs = await GENERATE_DOCS_API(repo);
       const timestamp = new Date().toISOString();
-      const updatedHistory = [...(repo.documentationHistory || []), { content: docs, timestamp }];
-      const updatedRepo = { ...repo, documentation: docs, documentationHistory: updatedHistory, updatedAt: timestamp };
+      const updatedHistory = [
+        ...(repo.documentationHistory || []),
+        { content: docs, timestamp },
+      ];
+      const updatedRepo = {
+        ...repo,
+        documentation: docs,
+        documentationHistory: updatedHistory,
+        updatedAt: timestamp,
+      };
 
       // Update state directly without local storage
       setRepo(updatedRepo);
@@ -160,7 +191,9 @@ const RepoPage = () => {
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground italic">No files available</p>
+            <p className="text-sm text-muted-foreground italic">
+              No files available
+            </p>
           )}
         </div>
       </ScrollArea>
@@ -187,12 +220,16 @@ const RepoPage = () => {
                 <div className="w-3 h-3 rounded-full bg-green-500" />
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-medium">Documentation - {repoName || "Unnamed"}</span>
+                <span className="text-sm font-medium">
+                  Documentation - {repoName || "Unnamed"}
+                </span>
                 <div className="flex gap-1 bg-muted rounded-md p-1 mr-10">
                   <button
                     onClick={() => setActiveTab("preview")}
                     className={`px-3 py-1 text-sm rounded-md ${
-                      activeTab === "preview" ? "bg-background text-foreground" : "text-muted-foreground hover:bg-background"
+                      activeTab === "preview"
+                        ? "bg-background text-foreground"
+                        : "text-muted-foreground hover:bg-background"
                     }`}
                   >
                     Preview
@@ -200,7 +237,9 @@ const RepoPage = () => {
                   <button
                     onClick={() => setActiveTab("raw")}
                     className={`px-3 py-1 text-sm rounded-md ${
-                      activeTab === "raw" ? "bg-background text-foreground" : "text-muted-foreground hover:bg-background"
+                      activeTab === "raw"
+                        ? "bg-background text-foreground"
+                        : "text-muted-foreground hover:bg-background"
                     }`}
                   >
                     Raw
@@ -214,7 +253,9 @@ const RepoPage = () => {
                   <ReactMarkdown>{content}</ReactMarkdown>
                 </div>
               ) : (
-                <pre className="text-sm bg-muted p-4 rounded-md border border-border whitespace-pre-wrap">{content}</pre>
+                <pre className="text-sm bg-muted p-4 rounded-md border border-border whitespace-pre-wrap">
+                  {content}
+                </pre>
               )}
             </ScrollArea>
             <div className="p-4 border-t border-border bg-muted flex justify-end gap-2">
@@ -226,10 +267,7 @@ const RepoPage = () => {
                 <Copy className="h-4 w-4" />
                 Copy
               </Button>
-              <Button
-                onClick={onDownload}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={onDownload} className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 Download
               </Button>
@@ -241,7 +279,11 @@ const RepoPage = () => {
   };
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center"><LoadingSpinner /></div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (error) {
@@ -266,35 +308,56 @@ const RepoPage = () => {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h1 className="text-lg font-medium text-foreground">{repo.name}</h1>
+              <h1 className="text-lg font-medium text-foreground">
+                {repo.name}
+              </h1>
             </div>
           </header>
 
           <main className="p-6 flex-1 overflow-y-auto">
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4">Repository Details</h2>
-                <p className="text-sm text-muted-foreground">URL: {repo.url || "N/A"}</p>
+                <h2 className="text-lg font-semibold text-foreground mb-4">
+                  Repository Details
+                </h2>
                 <p className="text-sm text-muted-foreground">
-                  Files: {repo.files?.length || 0} | Created: {formatDate(repo.createdAt)} | Updated: {formatDate(repo.updatedAt)}
+                  URL: {repo.url || "N/A"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Files: {repo.files?.length || 0} | Created:{" "}
+                  {formatDate(repo.createdAt)} | Updated:{" "}
+                  {formatDate(repo.updatedAt)}
                 </p>
               </div>
 
               {repo.documentationHistory?.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Documentation Versions</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">
+                    Documentation Versions
+                  </h3>
                   {repo.documentationHistory.map((doc, index, arr) => {
-                    const version = `V_${Math.floor(arr.length - index)}.${index + 1}.0`;
+                    const version = `V_${Math.floor(arr.length - index)}.${
+                      index + 1
+                    }.0`;
                     return (
                       <div
                         key={index}
                         className="p-3 bg-muted rounded-md border border-border mb-2 cursor-pointer hover:bg-muted/80 transition-colors duration-200"
-                        onClick={() => setDocumentation({ content: doc.content, repoId: repo.id })}
+                        onClick={() =>
+                          setDocumentation({
+                            content: doc.content,
+                            repoId: repo.id,
+                          })
+                        }
                       >
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium text-foreground">{version}</span>
-                          <span className="text-xs text-muted-foreground">{formatDate(doc.timestamp)}</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {version}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(doc.timestamp)}
+                          </span>
                         </div>
                       </div>
                     );
@@ -309,7 +372,9 @@ const RepoPage = () => {
                       style={{ width: `${progress}%` }}
                       className="h-2 bg-primary rounded-full transition-all duration-1000"
                     />
-                    <p className="text-sm text-muted-foreground text-center">Generating...</p>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Generating...
+                    </p>
                   </div>
                 ) : (
                   <Button
@@ -343,7 +408,9 @@ const RepoPage = () => {
             repoName={repo.name}
             onClose={() => setDocumentation(null)}
             onDownload={() => {
-              const blob = new Blob([documentation.content], { type: "text/markdown" });
+              const blob = new Blob([documentation.content], {
+                type: "text/markdown",
+              });
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;

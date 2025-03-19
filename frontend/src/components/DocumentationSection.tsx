@@ -1,11 +1,9 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   FileText,
   Download,
   Clock,
   CheckCircle,
-  ExternalLink,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 

@@ -66,7 +66,7 @@ const FolderStructure = ({
         {isFolder && isExpanded && node.children && (
           <div>
             {node.children.map((childNode) =>
-              renderTreeNode(childNode, depth + 1),
+              renderTreeNode(childNode, depth + 1)
             )}
           </div>
         )}

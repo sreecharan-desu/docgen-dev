@@ -20,29 +20,99 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDebounce } from "use-debounce";
 
 const components = {
-  Button: lazy(() => import("@/components/ui/button").then((mod) => ({ default: mod.Button }))),
-  Input: lazy(() => import("@/components/ui/input").then((mod) => ({ default: mod.Input }))),
-  Label: lazy(() => import("@/components/ui/label").then((mod) => ({ default: mod.Label }))),
-  Card: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.Card }))),
-  CardContent: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardContent }))),
-  CardHeader: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardHeader }))),
-  CardTitle: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardTitle }))),
-  CardDescription: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardDescription }))),
-  CardFooter: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardFooter }))),
-  Dialog: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))),
-  DialogContent: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogContent }))),
-  DialogHeader: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogHeader }))),
-  DialogTitle: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogTitle }))),
-  DialogFooter: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogFooter }))),
-  DialogClose: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogClose }))),
-  Alert: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.Alert }))),
-  AlertDescription: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.AlertDescription }))),
-  Badge: lazy(() => import("@/components/ui/badge").then((mod) => ({ default: mod.Badge }))),
-  DropdownMenu: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenu }))),
-  DropdownMenuTrigger: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuTrigger }))),
-  DropdownMenuContent: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuContent }))),
-  DropdownMenuItem: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuItem }))),
-  DropdownMenuSeparator: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuSeparator }))),
+  Button: lazy(() =>
+    import("@/components/ui/button").then((mod) => ({ default: mod.Button }))
+  ),
+  Input: lazy(() =>
+    import("@/components/ui/input").then((mod) => ({ default: mod.Input }))
+  ),
+  Label: lazy(() =>
+    import("@/components/ui/label").then((mod) => ({ default: mod.Label }))
+  ),
+  Card: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.Card }))
+  ),
+  CardContent: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardContent }))
+  ),
+  CardHeader: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardHeader }))
+  ),
+  CardTitle: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardTitle }))
+  ),
+  CardDescription: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({
+      default: mod.CardDescription,
+    }))
+  ),
+  CardFooter: lazy(() =>
+    import("@/components/ui/card").then((mod) => ({ default: mod.CardFooter }))
+  ),
+  Dialog: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))
+  ),
+  DialogContent: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogContent,
+    }))
+  ),
+  DialogHeader: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogHeader,
+    }))
+  ),
+  DialogTitle: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogTitle,
+    }))
+  ),
+  DialogFooter: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogFooter,
+    }))
+  ),
+  DialogClose: lazy(() =>
+    import("@/components/ui/dialog").then((mod) => ({
+      default: mod.DialogClose,
+    }))
+  ),
+  Alert: lazy(() =>
+    import("@/components/ui/alert").then((mod) => ({ default: mod.Alert }))
+  ),
+  AlertDescription: lazy(() =>
+    import("@/components/ui/alert").then((mod) => ({
+      default: mod.AlertDescription,
+    }))
+  ),
+  Badge: lazy(() =>
+    import("@/components/ui/badge").then((mod) => ({ default: mod.Badge }))
+  ),
+  DropdownMenu: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenu,
+    }))
+  ),
+  DropdownMenuTrigger: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuTrigger,
+    }))
+  ),
+  DropdownMenuContent: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuContent,
+    }))
+  ),
+  DropdownMenuItem: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuItem,
+    }))
+  ),
+  DropdownMenuSeparator: lazy(() =>
+    import("@/components/ui/dropdown-menu").then((mod) => ({
+      default: mod.DropdownMenuSeparator,
+    }))
+  ),
 };
 
 const {
@@ -193,7 +263,8 @@ const ProjectsSection = () => {
 
   useEffect(() => {
     const isFirstRender = !projects || projects.length === 0;
-    const isPageReload = performance.navigation && performance.navigation.type === 1;
+    const isPageReload =
+      performance.navigation && performance.navigation.type === 1;
 
     if (isFirstRender || isPageReload || shouldRefetch) {
       getProjects();
@@ -216,7 +287,7 @@ const ProjectsSection = () => {
       };
       const newProject = await createProject(projectData, token);
 
-      setProjects(prevProjects => [...prevProjects, newProject]);
+      setProjects((prevProjects) => [...prevProjects, newProject]);
       setProject(newProject);
       navigateTo(`/project/${newProject.id}`);
       setOpen(false);
@@ -238,9 +309,15 @@ const ProjectsSection = () => {
     setIsLoading(true);
     setError("");
     try {
-      const updatedProject = await renameProject(selectedProject.id, newProjectName, token);
-      setProjects(prevProjects =>
-        prevProjects.map(p => p.id === selectedProject.id ? updatedProject : p)
+      const updatedProject = await renameProject(
+        selectedProject.id,
+        newProjectName,
+        token
+      );
+      setProjects((prevProjects) =>
+        prevProjects.map((p) =>
+          p.id === selectedProject.id ? updatedProject : p
+        )
       );
       setRenameOpen(false);
       setNewProjectName("");
@@ -257,8 +334,8 @@ const ProjectsSection = () => {
     setError("");
     try {
       await deleteProject(selectedProject.id, token);
-      setProjects(prevProjects =>
-        prevProjects.filter(p => p.id !== selectedProject.id)
+      setProjects((prevProjects) =>
+        prevProjects.filter((p) => p.id !== selectedProject.id)
       );
       setDeleteOpen(false);
       setSelectedProject(null);
@@ -275,10 +352,10 @@ const ProjectsSection = () => {
     return isNaN(date.getTime())
       ? "N/A"
       : date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
   };
 
   const goToProject = (projectId) => {
@@ -306,9 +383,12 @@ const ProjectsSection = () => {
     setShouldRefetch(true);
   };
 
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-    project.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+  const filteredProjects = projects.filter(
+    (project) =>
+      project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      project.description
+        .toLowerCase()
+        .includes(debouncedSearchTerm.toLowerCase())
   );
 
   return (
@@ -318,10 +398,16 @@ const ProjectsSection = () => {
           <div className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">Projects</h1>
-              <p className="text-muted-foreground">Manage your DocGen projects</p>
+              <p className="text-muted-foreground">
+                Manage your DocGen projects
+              </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleManualRefresh} disabled={fetchingProjects}>
+              <Button
+                variant="outline"
+                onClick={handleManualRefresh}
+                disabled={fetchingProjects}
+              >
                 {fetchingProjects ? "Refreshing..." : <RefreshCw />}
               </Button>
               <Button onClick={() => setOpen(true)}>
@@ -385,18 +471,30 @@ const ProjectsSection = () => {
                       <span className="truncate">{project.name}</span>
                       <Suspense fallback={<div className="h-5 w-5"></div>}>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <DropdownMenuTrigger
+                            asChild
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => openRenameDialog(project, e)}>
+                            <DropdownMenuItem
+                              onClick={(e) => openRenameDialog(project, e)}
+                            >
                               <Pencil className="h-4 w-4 mr-2" />
                               Rename
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={(e) => openDeleteDialog(project, e)}>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => openDeleteDialog(project, e)}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -415,20 +513,28 @@ const ProjectsSection = () => {
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="h-4 w-4 mr-1 text-primary" />
-                      <div>Updated: {formatDate(project.updated_at) || "Never"}</div>
+                      <div>
+                        Updated: {formatDate(project.updated_at) || "Never"}
+                      </div>
                     </div>
                   </CardContent>
                   <CardFooter className="pt-2 border-t border-border bg-muted/40 rounded-b-2xl">
                     <div className="flex justify-between w-full text-sm">
                       <div className="flex items-center gap-1">
                         <GitBranch className="h-4 w-4 text-primary" />
-                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                        <Badge
+                          variant="outline"
+                          className="px-2 py-1 text-xs font-medium"
+                        >
                           {project.repo_count} repos
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-primary" />
-                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                        <Badge
+                          variant="outline"
+                          className="px-2 py-1 text-xs font-medium"
+                        >
                           {project.collaborator_count} collaborators
                         </Badge>
                       </div>
@@ -557,7 +663,9 @@ const ProjectsSection = () => {
               </DialogHeader>
               <div className="py-4">
                 <p className="text-muted-foreground">
-                  Are you sure you want to delete project <span className="font-semibold">{selectedProject?.name}</span>? This action cannot be undone.
+                  Are you sure you want to delete project{" "}
+                  <span className="font-semibold">{selectedProject?.name}</span>
+                  ? This action cannot be undone.
                 </p>
                 {error && (
                   <Alert variant="destructive" className="mt-4">

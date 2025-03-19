@@ -25,8 +25,8 @@ export const Terminal = ({ commands, loop = true }: TerminalProps) => {
             loop
               ? (prev + 1) % commands.length
               : prev < commands.length - 1
-                ? prev + 1
-                : prev,
+              ? prev + 1
+              : prev
           );
         }, 2000);
       }

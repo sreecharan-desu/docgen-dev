@@ -28,8 +28,15 @@ const MdPreview = ({ isOpen, onClose, content = "", onDownload }) => {
               <div className="w-3 h-3 rounded-full bg-yellow-500" />
               <div className="w-3 h-3 rounded-full bg-green-500" />
             </div>
-            <span className="text-sm font-medium text-gray-100">Documentation Preview - VS Code</span>
-            <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-400 hover:text-white hover:bg-gray-700">
+            <span className="text-sm font-medium text-gray-100">
+              Documentation Preview - VS Code
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-gray-400 hover:text-white hover:bg-gray-700"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -38,7 +45,9 @@ const MdPreview = ({ isOpen, onClose, content = "", onDownload }) => {
           <div className="flex flex-1 overflow-hidden">
             {/* Raw Markdown View */}
             <div className="w-1/2 border-r border-gray-800">
-              <div className="p-2 bg-gray-850 text-gray-400 text-xs font-medium">Raw Markdown</div>
+              <div className="p-2 bg-gray-850 text-gray-400 text-xs font-medium">
+                Raw Markdown
+              </div>
               <ScrollArea className="h-full p-4 bg-gray-900">
                 <motion.pre
                   initial={{ opacity: 0, y: 10 }}
@@ -53,7 +62,9 @@ const MdPreview = ({ isOpen, onClose, content = "", onDownload }) => {
 
             {/* Rendered Preview */}
             <div className="w-1/2">
-              <div className="p-2 bg-gray-850 text-gray-400 text-xs font-medium">Rendered Preview</div>
+              <div className="p-2 bg-gray-850 text-gray-400 text-xs font-medium">
+                Rendered Preview
+              </div>
               <ScrollArea className="h-full p-4 bg-gray-900">
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -81,7 +92,11 @@ const MdPreview = ({ isOpen, onClose, content = "", onDownload }) => {
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button onClick={onDownload} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button
+                onClick={onDownload}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 <Download className="mr-2 h-4 w-4" />
                 Download
               </Button>

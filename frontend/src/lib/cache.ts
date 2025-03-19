@@ -32,4 +32,4 @@ export class Cache {
   static remove(key: string): void {
     localStorage.removeItem(key);
   }
-} 
+}

@@ -18,7 +18,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext" // Assuming correct path
+import { useAuth } from "../../contexts/AuthContext"; // Assuming correct path
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -29,11 +29,15 @@ const Sidebar = () => {
 
   // Redirect to home if user is logged in but no token exists
   useEffect(() => {
-    if (user != null && (localStorage.getItem('token') == null || localStorage.getItem("token") === undefined)) {
-      navigate('/');
+    if (
+      user != null &&
+      (localStorage.getItem("token") == null ||
+        localStorage.getItem("token") === undefined)
+    ) {
+      navigate("/");
     }
 
-    if (window.location.pathname.startsWith('/repo')) {
+    if (window.location.pathname.startsWith("/repo")) {
       setIsCollapsed(true);
     }
 
@@ -54,7 +58,12 @@ const Sidebar = () => {
 
   // Sidebar navigation items
   const navItems = [
-    { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
+    {
+      id: "projects",
+      label: "Projects",
+      icon: FolderKanban,
+      path: "/projects",
+    },
     { id: "pricing", label: "Pricing", icon: CreditCard, path: "/pricing" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
     { id: "docs", label: "Docs", icon: LinkIcon, path: "/docs" },
@@ -146,7 +155,10 @@ const Sidebar = () => {
         ) : (
           <>
             <Avatar className="h-12 w-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background text-white">
-              <AvatarImage src={user?.avatarUrl || ""} alt={user?.name || "User"} />
+              <AvatarImage
+                src={user?.avatarUrl || ""}
+                alt={user?.name || "User"}
+              />
               <AvatarFallback className="bg-[#00ff9d] text-white">
                 {getUserInitials()}
               </AvatarFallback>
@@ -154,12 +166,14 @@ const Sidebar = () => {
             {!isCollapsed && (
               <motion.div className="text-center mt-2">
                 <p className="font-medium dark:text-slate-200">
-                  {user?.name || <div className="h-3 w-20 bg-slate-600/40 rounded mx-auto mt-1"></div>
-                  }
+                  {user?.name || (
+                    <div className="h-3 w-20 bg-slate-600/40 rounded mx-auto mt-1"></div>
+                  )}
                 </p>
                 <p className="font-small text-sm dark:text-slate-200">
-                  {user?.email || <div className="h-3 w-20 bg-slate-600/40 rounded mx-auto mt-1"></div>
-                  }
+                  {user?.email || (
+                    <div className="h-3 w-20 bg-slate-600/40 rounded mx-auto mt-1"></div>
+                  )}
                 </p>
               </motion.div>
             )}
@@ -176,7 +190,9 @@ const Sidebar = () => {
                 <Link to={item.path}>
                   <Button
                     variant="ghost"
-                    className={`w-full ${isCollapsed ? "justify-center px-0" : "justify-start"} relative h-10`}
+                    className={`w-full ${
+                      isCollapsed ? "justify-center px-0" : "justify-start"
+                    } relative h-10`}
                   >
                     <item.icon
                       className={`h-4 w-4 ${isCollapsed ? "" : "mr-3"}`}
@@ -207,10 +223,14 @@ const Sidebar = () => {
                 <Button
                   key={item.id}
                   variant="ghost"
-                  className={`w-full ${isCollapsed ? "justify-center px-0" : "justify-start"} h-10`}
+                  className={`w-full ${
+                    isCollapsed ? "justify-center px-0" : "justify-start"
+                  } h-10`}
                   onClick={item.action}
                 >
-                  <item.icon className={`h-4 w-4 ${isCollapsed ? "" : "mr-3"}`} />
+                  <item.icon
+                    className={`h-4 w-4 ${isCollapsed ? "" : "mr-3"}`}
+                  />
                   {!isCollapsed && <span>{item.label}</span>}
                 </Button>
               </TooltipTrigger>
