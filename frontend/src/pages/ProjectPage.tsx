@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -309,9 +310,9 @@ const ProjectPage = () => {
       setFetchingRepos(true);
       setFetchError("");
       try {
-        const [projectData,reposData] = await Promise.all([
+        const [projectData, reposData] = await Promise.all([
           GET_PROJECT_API(projectId, JWT_TOKEN),
-          GET_REPOS_API(projectId,JWT_TOKEN)
+          GET_REPOS_API(projectId, JWT_TOKEN)
         ]);
         setProject(projectData);
         setRepositories(reposData)
@@ -462,10 +463,10 @@ const ProjectPage = () => {
     return isNaN(date.getTime())
       ? "N/A"
       : date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
   };
 
   // Navigate to repository details (unchanged)
@@ -501,7 +502,16 @@ const ProjectPage = () => {
     <Suspense fallback={<LoadingSpinner />}>
       <div className="space-y-6 p-10 mt-8">
         <header className="mb-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/projects`)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
           <div className="flex justify-between items-center mb-4">
+
             <div>
               <h1 className="text-3xl font-bold mb-2">
                 {project?.name || "Repositories"}

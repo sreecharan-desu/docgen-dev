@@ -172,11 +172,11 @@ export default function Login() {
           variants={itemVariants}
         >
           <div className="absolute w-full h-px bg-border" />
-          <span className="relative px-4 bg-card text-xs text-muted-foreground">
+          {/* <span className="relative px-4 bg-card text-xs text-muted-foreground">
             Or
-          </span>
+          </span> */}
         </motion.div>
-
+{/* 
         <motion.div variants={itemVariants}>
           <Button
             type="button"
@@ -192,7 +192,7 @@ export default function Login() {
             )}
             {isGithubLoading ? "Connecting..." : "Continue with GitHub"}
           </Button>
-        </motion.div>
+        </motion.div> */}
 
         {/* {showEmailForm ? (
           <motion.form 

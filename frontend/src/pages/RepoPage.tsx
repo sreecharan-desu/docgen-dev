@@ -43,28 +43,9 @@ const components = {
 
 const { Button, Dialog, DialogContent, DialogHeader, DialogTitle } = components;
 
-// Hard-coded repository data
-const HARDCODED_REPO = {
-  id: "repo-123",
-  name: "Sample Repository",
-  url: "https://github.com/user/sample-repo",
-  files: ["README.md", "index.js", "package.json"],
-  documentationHistory: [
-    {
-      content: "# Sample Documentation\n\nThis is a sample documentation.",
-      timestamp: "2023-10-01T12:00:00Z",
-    },
-  ],
-  createdAt: "2023-09-01T10:00:00Z",
-  updatedAt: "2023-10-01T12:00:00Z",
-  projectId: "project-456",
-};
-
-
 const BASE_URL = "https://api2.docgen.dev/api/v1";
-const JWT_TOKEN = localStorage.getItem("token");
 
-
+// API placeholder functions
 const GET_REPO_API = async (repo_id, token) => {
   const response = await fetch(`${BASE_URL}/repositories/get-repository/${repo_id}`, {
     method: "GET",
@@ -73,33 +54,23 @@ const GET_REPO_API = async (repo_id, token) => {
       "Content-Type": "application/json",
     },
   });
-  if (!response.ok) throw new Error("Failed to fetch repositories");
+  if (!response.ok) throw new Error("Failed to fetch repository");
   return await response.json();
 };
 
-// Mock function to generate documentation
 const GENERATE_DOCS_API = async (repo) => {
+  // Placeholder for actual API call
   try {
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    const mockDocs = `
-# ${repo.name} Documentation
-
-## Overview
-This is a clean, minimalistic documentation for the ${repo.name} repository.
-
-## Files
-${repo.files
-        .map((file) => `- **${file}**: Automatically generated description`)
-        .join("\n")}
-
-## Usage
-\`\`\`javascript
-console.log("Hello from ${repo.name}");
-\`\`\`
-
-Generated on: ${new Date().toLocaleDateString()}
-    `;
-    return mockDocs;
+    const response = await fetch(`${BASE_URL}/repositories/generate-docs/${repo.id}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ repo }),
+    });
+    if (!response.ok) throw new Error("Failed to generate documentation");
+    return await response.json();
   } catch (error) {
     console.error("Error generating documentation:", error);
     throw new Error(`Generation Error: ${error.message}`);
@@ -118,22 +89,18 @@ const RepoPage = () => {
   const [documentation, setDocumentation] = useState(null);
   const [progress, setProgress] = useState(0);
 
-  const JWT_TOKEN = localStorage.getItem("token") || "mock-token";
+  const JWT_TOKEN = localStorage.getItem("token");
 
-  // Use hard-coded repository data on mount
   useEffect(() => {
     if (!JWT_TOKEN) navigate("/");
 
     const fetchRepo = async () => {
-
       setIsLoading(true);
       setError("");
       try {
-        const apirepoData = await GET_REPO_API(repoId, JWT_TOKEN);
-        console.log(apirepoData);
-        setRepo(apirepoData);
-        setProjectId(apirepoData.project_id)
-
+        const repoData = await GET_REPO_API(repoId, JWT_TOKEN);
+        setRepo(repoData);
+        setProjectId(repoData.project_id);
       } catch (err) {
         setError(err.message || "Error fetching repository. Please try again.");
       } finally {
@@ -141,9 +108,8 @@ const RepoPage = () => {
       }
     };
     fetchRepo();
-  }, [JWT_TOKEN, navigate]);
+  }, [repoId, JWT_TOKEN, navigate]);
 
-  // Generate documentation
   const generateDocumentation = async () => {
     if (!repo) return;
     setIsGeneratingDocs(true);
@@ -166,18 +132,17 @@ const RepoPage = () => {
       const timestamp = new Date().toISOString();
       const updatedHistory = [
         ...(repo.documentationHistory || []),
-        { content: docs, timestamp },
+        { content: docs.content || docs, timestamp },
       ];
       const updatedRepo = {
         ...repo,
-        documentation: docs,
+        documentation: docs.content || docs,
         documentationHistory: updatedHistory,
         updatedAt: timestamp,
       };
 
-      // Update state directly without local storage
       setRepo(updatedRepo);
-      setDocumentation({ content: docs, repoId: repo.id });
+      setDocumentation({ content: docs.content || docs, repoId: repo.id });
       toast.success("Documentation generated successfully");
     } catch (err) {
       toast.error(err.message || "Failed to generate documentation");
@@ -187,14 +152,12 @@ const RepoPage = () => {
     }
   };
 
-  // Format date
   const formatDate = (timestamp) => {
     if (!timestamp) return "N/A";
     const date = new Date(timestamp);
     return isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
   };
 
-  // Render file explorer
   const renderFileExplorer = (files) => (
     <div className="w-72 flex-shrink-0 bg-background border-r border-border">
       <div className="p-4 border-b border-border">
@@ -202,7 +165,7 @@ const RepoPage = () => {
       </div>
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="p-4">
-          {files.length > 0 ? (
+          {files?.length > 0 ? (
             files.map((file, index) => (
               <div
                 key={index}
@@ -222,7 +185,6 @@ const RepoPage = () => {
     </div>
   );
 
-  // Documentation Preview Component
   const DocumentationPreview = ({ content, repoName, onClose, onDownload }) => {
     const [activeTab, setActiveTab] = useState("preview");
 
@@ -310,13 +272,15 @@ const RepoPage = () => {
     return <div className="p-10 text-center text-red-500">{error}</div>;
   }
 
+  if (!repo) {
+    return <div className="p-10 text-center">No repository data available</div>;
+  }
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <div className="flex h-screen mt-5">
-        {/* File Explorer Sidebar */}
         {renderFileExplorer(repo.files || [])}
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <header className="border-b border-border p-4 flex items-center justify-between bg-background">
             <div className="flex items-center space-x-3">
@@ -420,7 +384,6 @@ const RepoPage = () => {
           </footer>
         </div>
 
-        {/* Documentation Preview */}
         {documentation && (
           <DocumentationPreview
             content={documentation.content}
@@ -444,7 +407,6 @@ const RepoPage = () => {
   );
 };
 
-// Loading Spinner
 const LoadingSpinner = () => (
   <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto"></div>
 );

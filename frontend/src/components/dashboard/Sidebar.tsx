@@ -18,16 +18,15 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext"; // Assuming correct path
+import { useAuth } from "../../contexts/AuthContext";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth(); // Get user and logout from AuthContext
+  const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hoveredItem, setHoveredItem] = useState(null);
 
-  // Redirect to home if user is logged in but no token exists
   useEffect(() => {
     if (
       user != null &&
@@ -41,11 +40,9 @@ const Sidebar = () => {
       setIsCollapsed(true);
     }
 
-    // Simulate loading state - set to false when user data is fully loaded
     setIsLoading(user === null || user === undefined);
-  }, [user, navigate]); // Dependencies: user and navigate
+  }, [user, navigate]);
 
-  // Extracts user initials for AvatarFallback
   const getUserInitials = () => {
     if (!user?.name) return "U";
     return user.name
@@ -56,7 +53,6 @@ const Sidebar = () => {
       .substring(0, 2);
   };
 
-  // Sidebar navigation items
   const navItems = [
     {
       id: "projects",
@@ -69,7 +65,6 @@ const Sidebar = () => {
     { id: "docs", label: "Docs", icon: LinkIcon, path: "/docs" },
   ];
 
-  // Footer action items
   const footerItems = [
     {
       id: "help",
@@ -86,7 +81,6 @@ const Sidebar = () => {
     },
   ];
 
-  // Sidebar Animation Variants
   const sidebarVariants = {
     expanded: { width: 240, transition: { duration: 0.3, ease: "easeInOut" } },
     collapsed: { width: 72, transition: { duration: 0.3, ease: "easeInOut" } },
@@ -98,7 +92,6 @@ const Sidebar = () => {
     rotate: (isCollapsed) => ({ rotate: isCollapsed ? 180 : 0 }),
   };
 
-  // Skeleton component for the user info
   const UserSkeleton = () => (
     <div className="animate-pulse flex flex-col items-center">
       <div className="h-12 w-12 rounded-full bg-slate-700 mb-2"></div>
@@ -113,14 +106,14 @@ const Sidebar = () => {
 
   return (
     <motion.div
-      className="border-r border-slate-200/20 dark:border-slate-800/40 h-screen sticky top-0 flex flex-col bg-white/5 dark:bg-slate-900/50 backdrop-blur-sm z-20"
+      className="border-r border-slate-200/20 dark:border-slate-800/40 h-screen sticky top-0 flex flex-col bg-white/5 dark:bg-slate-900/50 backdrop-blur-sm z-20 relative" // Added relative for positioning context
       initial="expanded"
       animate={isCollapsed ? "collapsed" : "expanded"}
       variants={sidebarVariants}
     >
-      {/* Sidebar Toggle Button */}
+      {/* Sidebar Toggle Button - Centered Vertically */}
       <motion.button
-        className="absolute -right-3 top-20 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-full p-1.5 shadow-md z-30"
+        className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-full p-1.5 shadow-md z-30"
         onClick={() => setIsCollapsed(!isCollapsed)}
         variants={togglerVariants}
         custom={isCollapsed}
@@ -136,18 +129,19 @@ const Sidebar = () => {
         <motion.img
           src="/docgen-logo.png"
           alt="DocGen Logo"
-          className="h-10 w-10 flex-shrink-0" // Added flex-shrink-0 to prevent squishing
+          className="h-10 w-10 flex-shrink-0"
           whileHover={{ scale: 1.15, transition: { duration: 0.5 } }}
         />
         {!isCollapsed && (
           <motion.span
-            className="font-semibold -mt-1 text-lg text-white truncate" // Added truncate for overflow control
+            className="font-semibold -mt-1 text-lg text-white truncate"
             whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
           >
             DocGen
           </motion.span>
         )}
       </Link>
+
       {/* User Avatar Section with Skeleton */}
       <motion.div className="p-4 border-b border-slate-200/20 dark:border-slate-800/40 flex flex-col items-center">
         {isLoading ? (
