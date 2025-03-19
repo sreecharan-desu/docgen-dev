@@ -127,7 +127,7 @@ const Sidebar = () => {
       <motion.div className="p-4 border-b border-slate-200/20 dark:border-slate-800/40 flex flex-col items-center">
         <Avatar className="h-12 w-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background text-white">
           <AvatarImage src={user?.avatarUrl || ""} alt={user?.name || "User"} />
-          <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary/30 text-white">
+          <AvatarFallback className="bg-[#00ff9d] text-white">
             {getUserInitials()}
           </AvatarFallback>
         </Avatar>

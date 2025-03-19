@@ -118,7 +118,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-6 items-center">
             <div>
-              <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center">
+              <div className="h-24 w-24 rounded-full bg-black flex items-center justify-center">
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
@@ -174,7 +174,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
                 type="email"
                 value={user?.email || ""}
                 disabled
-                className="w-full p-2 rounded border border-input bg-muted text-muted-foreground"
+                className="w-full p-2 rounded border border-input bg-black text-muted-foreground"
               />
               <p className="text-xs font-semibold text-muted-foreground mt-1">
                 <b>*</b> Email cannot be changed
