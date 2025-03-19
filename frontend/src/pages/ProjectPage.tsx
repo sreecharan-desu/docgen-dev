@@ -736,7 +736,7 @@ const ProjectPage = () => {
                         <div className="col-span-3">
                           <input
                             type="file"
-                            // @ts-ignore
+                            // @ts-expect-error ----
                             webkitdirectory="true"
                             directory=""
                             onChange={handleFolderSelect}
