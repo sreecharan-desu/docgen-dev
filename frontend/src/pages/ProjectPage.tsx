@@ -113,6 +113,39 @@ const components = {
       default: mod.DropdownMenuSeparator,
     }))
   ),
+  Tabs: lazy(() =>
+    import("@/components/ui/tabs").then((mod) => ({ default: mod.Tabs }))
+  ),
+  TabsList: lazy(() =>
+    import("@/components/ui/tabs").then((mod) => ({ default: mod.TabsList }))
+  ),
+  TabsTrigger: lazy(() =>
+    import("@/components/ui/tabs").then((mod) => ({ default: mod.TabsTrigger }))
+  ),
+  TabsContent: lazy(() =>
+    import("@/components/ui/tabs").then((mod) => ({ default: mod.TabsContent }))
+  ),
+  Select: lazy(() =>
+    import("@/components/ui/select").then((mod) => ({ default: mod.Select }))
+  ),
+  SelectTrigger: lazy(() =>
+    import("@/components/ui/select").then((mod) => ({
+      default: mod.SelectTrigger,
+    }))
+  ),
+  SelectValue: lazy(() =>
+    import("@/components/ui/select").then((mod) => ({
+      default: mod.SelectValue,
+    }))
+  ),
+  SelectContent: lazy(() =>
+    import("@/components/ui/select").then((mod) => ({
+      default: mod.SelectContent,
+    }))
+  ),
+  SelectItem: lazy(() =>
+    import("@/components/ui/select").then((mod) => ({ default: mod.SelectItem }))
+  ),
 };
 
 const {
@@ -139,9 +172,18 @@ const {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } = components;
 
-// API Functions using DocGen endpoints
+// API Functions using DocGen endpoints (unchanged)
 const BASE_URL = "https://api2.docgen.dev/api/v1";
 
 const GET_PROJECT_API = async (projectId, token) => {
@@ -162,7 +204,7 @@ const GET_PROJECT_API = async (projectId, token) => {
 };
 
 const GET_REPOS_API = async (projectId, token) => {
-  const response = await fetch(`${BASE_URL}/list-repositories/${projectId}`, {
+  const response = await fetch(`${BASE_URL}/repositories/list-repositories?project_id=${projectId}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -174,7 +216,7 @@ const GET_REPOS_API = async (projectId, token) => {
 };
 
 const CREATE_REPO_API = async (projectId, repoData, token) => {
-  const response = await fetch(`${BASE_URL}/repo/create-repository`, {
+  const response = await fetch(`${BASE_URL}/repositories/create-repository`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -183,12 +225,12 @@ const CREATE_REPO_API = async (projectId, repoData, token) => {
     body: JSON.stringify({
       project_id: projectId,
       name: repoData.name,
-      source: "github",
-      repo_url: repoData.url,
+      source: repoData.source || "github",
+      repo_url: repoData.url || "",
       storage_path: `/repos/${projectId}/${repoData.name
         .toLowerCase()
         .replace(/\s+/g, "-")}`,
-      created_at: new Date().toISOString(),
+      created_at: new Date().getTime(),
       last_generated_at: null,
       last_generated_by: null,
     }),
@@ -197,8 +239,8 @@ const CREATE_REPO_API = async (projectId, repoData, token) => {
   return await response.json();
 };
 
-const UPDATE_REPO_API = async (repoId, updateData, token) => {
-  const response = await fetch(`${BASE_URL}/update-repository/${repoId}`, {
+const UPDATE_REPO_API = async (repo_id, updateData, token) => {
+  const response = await fetch(`${BASE_URL}/repositories/update-repository/${repo_id}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -230,7 +272,7 @@ const ProjectPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // State hooks (unchanged)
+  // State hooks (updated to include localFiles)
   const [open, setOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -246,26 +288,33 @@ const ProjectPage = () => {
   const [selectedRepo, setSelectedRepo] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [activeTab, setActiveTab] = useState("github");
+  const [githubUsername, setGithubUsername] = useState("");
+  const [githubRepos, setGithubRepos] = useState([]);
+  const [selectedGithubRepo, setSelectedGithubRepo] = useState("");
+  const [repoType, setRepoType] = useState("public");
+  const [localFolderName, setLocalFolderName] = useState("");
+  const [localFiles, setLocalFiles] = useState(null); // To store the selected folder/files
 
   const JWT_TOKEN = localStorage.getItem("token");
 
-  // Fetch project and repositories on mount
+  // Fetch project and repositories on mount (unchanged)
   useEffect(() => {
     if (!JWT_TOKEN) {
       navigate("/");
       return;
     }
+
     const fetchData = async () => {
       setFetchingRepos(true);
       setFetchError("");
       try {
-        const [projectData] = await Promise.all([
+        const [projectData,reposData] = await Promise.all([
           GET_PROJECT_API(projectId, JWT_TOKEN),
-          // GET_REPOS_API(projectId, JWT_TOKEN),
+          GET_REPOS_API(projectId,JWT_TOKEN)
         ]);
-        console.log(projectData);
         setProject(projectData);
-        // setRepositories(repoData);
+        setRepositories(reposData)
       } catch (err) {
         setFetchError(err.message || "Error fetching data. Please try again.");
       } finally {
@@ -275,22 +324,80 @@ const ProjectPage = () => {
     if (projectId) fetchData();
   }, [projectId, JWT_TOKEN, navigate]);
 
-  // Handle repository creation
+  // Mock GitHub repository fetch based on username (unchanged)
+  const fetchGithubRepos = () => {
+    const mockRepos = [
+      { name: "repo1", url: `https://github.com/${githubUsername}/repo1` },
+      { name: "repo2", url: `https://github.com/${githubUsername}/repo2` },
+      { name: "repo3", url: `https://github.com/${githubUsername}/repo3` },
+    ];
+    setGithubRepos(mockRepos);
+  };
+
+  // Handle folder selection and extract folder name
+  const handleFolderSelect = (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setLocalFiles(files);
+      // Extract the folder name from the first file's webkitRelativePath
+      const firstFilePath = files[0].webkitRelativePath;
+      const folderName = firstFilePath.split("/")[0]; // The first part of the path is the folder name
+      setLocalFolderName(folderName);
+    } else {
+      setLocalFiles(null);
+      setLocalFolderName("");
+    }
+  };
+
+  // Handle repository creation (updated to handle local file upload)
   const handleCreateRepo = async () => {
-    if (!repoName.trim() || !repoUrl.trim()) {
-      setError("Repository name and URL cannot be empty");
+    let finalRepoName = repoName;
+    let finalRepoUrl = repoUrl;
+    let source = activeTab;
+
+    if (activeTab === "local") {
+      if (!localFiles || localFiles.length === 0) {
+        setError("Please select a folder to upload");
+        return;
+      }
+      finalRepoName = localFolderName; // Use folder name as repo name
+      finalRepoUrl = null; // Ignore repo URL for local
+      source = "local";
+    } else if (activeTab === "github") {
+      if (!selectedGithubRepo) {
+        setError("Please select a GitHub repository to import");
+        return;
+      }
+      finalRepoName = selectedGithubRepo;
+      finalRepoUrl = githubRepos.find((repo) => repo.name === selectedGithubRepo)?.url;
+    }
+
+    if (!finalRepoName.trim()) {
+      setError("Repository name cannot be empty");
       return;
     }
+
+    if (activeTab === "github" && !finalRepoUrl) {
+      setError("Repository URL cannot be empty for GitHub");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
     try {
-      const repoData = { name: repoName, url: repoUrl };
+      const repoData = { name: finalRepoName, url: finalRepoUrl, source };
       const newRepo = await CREATE_REPO_API(projectId, repoData, JWT_TOKEN);
       setRepositories((prev) => [...prev, newRepo]);
       toast.success("Repository created successfully");
       setOpen(false);
       setRepoName("");
       setRepoUrl("");
+      setGithubUsername("");
+      setGithubRepos([]);
+      setSelectedGithubRepo("");
+      setLocalFolderName("");
+      setLocalFiles(null);
+      setActiveTab("github");
     } catch (err) {
       setError(err.message || "Error creating repository. Please try again.");
     } finally {
@@ -298,7 +405,12 @@ const ProjectPage = () => {
     }
   };
 
-  // Handle repository rename
+  // Placeholder for Import button (unchanged)
+  const handleImportGithubRepo = () => {
+    toast.info("Import functionality will be implemented later.");
+  };
+
+  // Handle repository rename (unchanged)
   const handleRenameRepo = async () => {
     if (!newRepoName.trim()) {
       setError("Repository name cannot be empty");
@@ -326,7 +438,7 @@ const ProjectPage = () => {
     }
   };
 
-  // Handle repository delete
+  // Handle repository delete (unchanged)
   const handleDeleteRepo = async () => {
     setIsLoading(true);
     setError("");
@@ -356,7 +468,7 @@ const ProjectPage = () => {
         });
   };
 
-  // Navigate to repository details
+  // Navigate to repository details (unchanged)
   const goToRepo = (repoId) => {
     navigate(`/repo/${repoId}`);
     const repo = repositories.find((r) => r.id === repoId);
@@ -384,7 +496,7 @@ const ProjectPage = () => {
         repo.repo_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
   );
 
-  // UI remains completely unchanged
+  // UI (updated Local tab in Create Repository Dialog)
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <div className="space-y-6 p-10 mt-8">
@@ -527,19 +639,116 @@ const ProjectPage = () => {
           )}
         </Suspense>
 
+        {/* Updated Create Repository Dialog */}
         <Dialog open={open} onOpenChange={setOpen}>
           <Suspense fallback={<LoadingSpinner />}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Create New Repository</DialogTitle>
+                <DialogTitle>Import Repository</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <InputField
-                  label="Name"
-                  value={repoName}
-                  setValue={setRepoName}
-                />
-                <InputField label="URL" value={repoUrl} setValue={setRepoUrl} />
+              <div className="py-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="github">GitHub</TabsTrigger>
+                    <TabsTrigger value="local">Local</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="github">
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right col-span-1">GitHub Username</Label>
+                        <div className="col-span-3 flex gap-2">
+                          <Input
+                            value={githubUsername}
+                            onChange={(e) => setGithubUsername(e.target.value)}
+                            placeholder="Enter GitHub username or profile URL"
+                          />
+                          <Button onClick={fetchGithubRepos} disabled={!githubUsername.trim()}>
+                            Search
+                          </Button>
+                        </div>
+                      </div>
+                      {githubRepos.length > 0 && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right col-span-1">Repository</Label>
+                          <div className="col-span-3 flex gap-2">
+                            <Select
+                              value={selectedGithubRepo}
+                              onValueChange={setSelectedGithubRepo}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select a repository" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {githubRepos.map((repo) => (
+                                  <SelectItem key={repo.name} value={repo.name}>
+                                    {repo.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button onClick={handleImportGithubRepo}>Import</Button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right col-span-1">Repository Type</Label>
+                        <div className="col-span-3 flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="public"
+                              name="repoType"
+                              value="public"
+                              checked={repoType === "public"}
+                              onChange={() => setRepoType("public")}
+                            />
+                            <Label htmlFor="public">Public</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="private"
+                              name="repoType"
+                              value="private"
+                              checked={repoType === "private"}
+                              onChange={() => setRepoType("private")}
+                            />
+                            <Label htmlFor="private">Private (Own)</Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="local">
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right col-span-1">Upload Folder</Label>
+                        <div className="col-span-3">
+                          <input
+                            type="file"
+                            // @ts-ignore
+                            webkitdirectory="true"
+                            directory=""
+                            onChange={handleFolderSelect}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                          />
+                        </div>
+                      </div>
+                      {localFolderName && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right col-span-1">Folder Name</Label>
+                          <div className="col-span-3">
+                            <Input
+                              value={localFolderName}
+                              readOnly
+                              className="col-span-3 bg-gray-100 cursor-not-allowed"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
                 {error && (
                   <Alert variant="destructive" className="mt-2">
                     <AlertCircle className="h-4 w-4" />
@@ -558,13 +767,14 @@ const ProjectPage = () => {
                   onClick={handleCreateRepo}
                   disabled={isLoading}
                 >
-                  {isLoading ? "Creating..." : "Create"}
+                  {isLoading ? "Importing..." : "Import Repository"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Suspense>
         </Dialog>
 
+        {/* Rename and Delete Dialogs (unchanged) */}
         <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
           <Suspense fallback={<LoadingSpinner />}>
             <DialogContent className="sm:max-w-md">
@@ -644,7 +854,7 @@ const ProjectPage = () => {
   );
 };
 
-// Reusable components remain unchanged
+// Reusable components (unchanged)
 const InputField = ({ label, value, setValue }) => (
   <div className="grid grid-cols-4 items-center gap-4">
     <Label className="text-right">{label}</Label>

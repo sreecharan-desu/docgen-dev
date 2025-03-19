@@ -60,6 +60,23 @@ const HARDCODED_REPO = {
   projectId: "project-456",
 };
 
+
+const BASE_URL = "https://api2.docgen.dev/api/v1";
+const JWT_TOKEN = localStorage.getItem("token");
+
+
+const GET_REPO_API = async (repo_id, token) => {
+  const response = await fetch(`${BASE_URL}/repositories/get-repository/${repo_id}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Failed to fetch repositories");
+  return await response.json();
+};
+
 // Mock function to generate documentation
 const GENERATE_DOCS_API = async (repo) => {
   try {
@@ -72,8 +89,8 @@ This is a clean, minimalistic documentation for the ${repo.name} repository.
 
 ## Files
 ${repo.files
-  .map((file) => `- **${file}**: Automatically generated description`)
-  .join("\n")}
+        .map((file) => `- **${file}**: Automatically generated description`)
+        .join("\n")}
 
 ## Usage
 \`\`\`javascript
@@ -93,7 +110,7 @@ const RepoPage = () => {
   const { id: repoId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-
+  const [projectid, setProjectId] = useState('');
   const [repo, setRepo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -106,12 +123,17 @@ const RepoPage = () => {
   // Use hard-coded repository data on mount
   useEffect(() => {
     if (!JWT_TOKEN) navigate("/");
+
     const fetchRepo = async () => {
+
       setIsLoading(true);
       setError("");
       try {
-        // Set hard-coded data directly instead of calling an API
-        setRepo(HARDCODED_REPO);
+        const apirepoData = await GET_REPO_API(repoId, JWT_TOKEN);
+        console.log(apirepoData);
+        setRepo(apirepoData);
+        setProjectId(apirepoData.project_id)
+
       } catch (err) {
         setError(err.message || "Error fetching repository. Please try again.");
       } finally {
@@ -226,21 +248,19 @@ const RepoPage = () => {
                 <div className="flex gap-1 bg-muted rounded-md p-1 mr-10">
                   <button
                     onClick={() => setActiveTab("preview")}
-                    className={`px-3 py-1 text-sm rounded-md ${
-                      activeTab === "preview"
+                    className={`px-3 py-1 text-sm rounded-md ${activeTab === "preview"
                         ? "bg-background text-foreground"
                         : "text-muted-foreground hover:bg-background"
-                    }`}
+                      }`}
                   >
                     Preview
                   </button>
                   <button
                     onClick={() => setActiveTab("raw")}
-                    className={`px-3 py-1 text-sm rounded-md ${
-                      activeTab === "raw"
+                    className={`px-3 py-1 text-sm rounded-md ${activeTab === "raw"
                         ? "bg-background text-foreground"
                         : "text-muted-foreground hover:bg-background"
-                    }`}
+                      }`}
                   >
                     Raw
                   </button>
@@ -303,7 +323,7 @@ const RepoPage = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/project/${repo.projectId}`)}
+                onClick={() => navigate(`/project/${repo.project_id}`)}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -336,9 +356,8 @@ const RepoPage = () => {
                     Documentation Versions
                   </h3>
                   {repo.documentationHistory.map((doc, index, arr) => {
-                    const version = `V_${Math.floor(arr.length - index)}.${
-                      index + 1
-                    }.0`;
+                    const version = `V_${Math.floor(arr.length - index)}.${index + 1
+                      }.0`;
                     return (
                       <div
                         key={index}

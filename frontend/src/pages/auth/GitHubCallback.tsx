@@ -75,9 +75,12 @@ export default function GitHubCallback() {
 
         // Handle direct token in URL (for authentication)
         if (token) {
+
           console.log("GitHubCallback: Token found in URL, processing login");
           // Store the token
           localStorage.setItem("token", token);
+
+          
 
           // Validate the token to get user data
           const response = await fetch(
@@ -95,7 +98,8 @@ export default function GitHubCallback() {
           }
 
           const userData = await response.json();
-          console.log("GitHubCallback: User data retrieved successfully");
+          localStorage.setItem("GithubData",userData)
+          console.log("GitHubCallback: User data retrieved successfully",userData);
 
           // Clean up URL and redirect to dashboard or specified return path
           window.history.replaceState(
@@ -140,6 +144,8 @@ export default function GitHubCallback() {
           // For auth operations, store the main auth token
           if (stateData.operation === "auth") {
             localStorage.setItem("token", data.token);
+            localStorage.setItem("github_token", data.githubToken);
+            localStorage.setItem("github_username", data.githubUsername);
           }
           // For repo operations, store GitHub token separately
           else {
@@ -149,6 +155,26 @@ export default function GitHubCallback() {
             if (data.githubUsername) {
               localStorage.setItem("github_username", data.githubUsername);
             }
+
+
+            // Fetch username manually if not provided
+
+  if (!data.githubUsername) {
+    try {
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      if (userResponse.ok) {
+        const userInfo = await userResponse.json();
+        localStorage.setItem("github_username", userInfo.login);
+      } else {
+        console.warn("Failed to fetch GitHub username");
+      }
+    } catch (e) {
+      console.error("Error fetching GitHub username:", e);
+    }
+  }
           }
 
           setStatus("success");
