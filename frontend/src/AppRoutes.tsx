@@ -20,6 +20,7 @@ const GitHubCallback = lazy(() => import("./pages/auth/GitHubCallback"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ProjectPage = lazy(() => import("./pages/ProjectPage"));
 const Sidebar = lazy(() => import('./components/dashboard/Sidebar'));
+const RepoPage = lazy(() => import('./pages/RepoPage'));
 const Navbar = lazy(() => import("./components/Navbar").then((mod) => ({ default: mod.Navbar })))
 
 export const AppRoutes = () => {
@@ -59,6 +60,7 @@ export const AppRoutes = () => {
               <Route path="/docs" element={<Suspense fallback={<LoadingAnimation />}><Docs /></Suspense>} />
               <Route path="*" element={<Suspense fallback={<LoadingAnimation />}><NotFound /></Suspense>} />
               <Route path="/project/:id" element={<Suspense fallback={<LoadingAnimation />}><ProjectPage /></Suspense>} />
+              <Route path="/repo/:id" element={<Suspense fallback={<LoadingAnimation />}><RepoPage /></Suspense>} />
             </Routes>
           </main>
         </div>

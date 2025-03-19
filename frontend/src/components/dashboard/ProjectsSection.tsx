@@ -6,23 +6,19 @@ import {
   Clock,
   Users,
   GitBranch,
-  ArrowUpRight,
   Search,
-  Filter,
   X,
   MoreVertical,
   Pencil,
   Trash2,
 } from "lucide-react";
-import { CREATE_PROJECT_API } from "@/utils/apis";
 import { useNavigate } from "react-router-dom";
 import { projectAtom } from "@/store/store";
 import { useSetRecoilState } from "recoil";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDebounce } from "use-debounce";
-import { DialogHeader } from "@/components/ui/dialog";
 
-// Lazy loading UI components
+// Lazy loading UI components (unchanged)
 const components = {
   Button: lazy(() => import("@/components/ui/button").then((mod) => ({ default: mod.Button }))),
   Input: lazy(() => import("@/components/ui/input").then((mod) => ({ default: mod.Input }))),
@@ -49,7 +45,7 @@ const components = {
   DropdownMenuSeparator: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuSeparator }))),
 };
 
-// Destructuring for cleaner usage
+// Destructuring for cleaner usage (unchanged)
 const {
   Button,
   Input,
@@ -62,6 +58,7 @@ const {
   CardFooter,
   Dialog,
   DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogFooter,
   DialogClose,
@@ -75,8 +72,72 @@ const {
   DropdownMenuSeparator,
 } = components;
 
+// API Base URL
+const BASE_URL = "https://api2.docgen.dev/api/v1/project";
+
+
+// API Functions
+const fetchProjects = async (token) => {
+  const response = await fetch(`${BASE_URL}/list-projects`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Failed to fetch projects");
+  return await response.json();
+};
+
+const createProject = async (projectData, token) => {
+  const response = await fetch(`${BASE_URL}/create-project`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(projectData),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to create project");
+  }
+  return await response.json();
+};
+
+const renameProject = async (projectId, newName, token) => {
+  const response = await fetch(`${BASE_URL}/update-project/${projectId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: newName }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to rename project");
+  }
+  return await response.json();
+};
+
+const deleteProject = async (projectId, token) => {
+  const response = await fetch(`${BASE_URL}/delete-project/${projectId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to delete project");
+  }
+  return await response.json();
+};
+
 const ProjectsSection = () => {
-  // State hooks
+  // State hooks (unchanged)
   const [open, setOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -89,47 +150,34 @@ const ProjectsSection = () => {
   const [fetchingProjects, setFetchingProjects] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [selectedProject, setSelectedProject] = useState(null);
-  // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
-  const user = useAuth();
+  const { user } = useAuth();
   const navigateTo = useNavigate();
   const setProject = useSetRecoilState(projectAtom);
+  const token = localStorage.getItem("token");
 
   // Fetch projects on component mount
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    const getProjects = async () => {
+      setFetchingProjects(true);
+      setFetchError("");
+      try {
+        const data = await fetchProjects(token);
+        setProjects(data);
+      } catch (err) {
+        setFetchError(
+          `Error fetching projects. Please try again.`
+        );
 
-  const fetchProjects = async () => {
-    setFetchingProjects(true);
-    setFetchError("");
-
-    try {
-      const response = await fetch(
-        "https://api2.docgen.dev/api/v1/project/list-projects",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch projects");
+      } finally {
+        setFetchingProjects(false);
       }
-
-      const data = await response.json();
-      setProjects(data);
-    } catch (err) {
-      setFetchError(err.message || `Error fetching projects. Please try again. ${<b className="underline" onClick={async () => await fetchProjects()}>Retry</b>}`);
-    } finally {
-      setFetchingProjects(false);
-    }
-  };
+    };
+    if (token) getProjects();
+    else navigateTo("/"); // Redirect if no token
+  }, [token, navigateTo]);
 
   const handleCreateProject = async () => {
     if (!projectName.trim() || !projectDescription.trim()) {
@@ -140,32 +188,19 @@ const ProjectsSection = () => {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(CREATE_PROJECT_API, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          name: projectName,
-          description: projectDescription,
-          owner_id: user.user.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok)
-        throw new Error(data.message || "Failed to create project");
-
-      setProject(data);
-      navigateTo(`/project/${data.id}`);
-
+      const projectData = {
+        name: projectName,
+        description: projectDescription,
+        owner_id: user?.id,
+      };
+      const newProject = await createProject(projectData, token);
+      setProject(newProject);
+      navigateTo(`/project/${newProject.id}`);
       setOpen(false);
       setProjectName("");
       setProjectDescription("");
     } catch (err) {
-      setError(err.message || "Error processing request. Please try again.");
+      setError(err.message || "Error creating project. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -180,37 +215,15 @@ const ProjectsSection = () => {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(
-        `https://api2.docgen.dev/api/v1/project/rename-project/${selectedProject.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            name: newProjectName,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok)
-        throw new Error(data.message || "Failed to rename project");
-
-      // Update the project in the local state
-      setProjects(projects.map(p => 
-        p.id === selectedProject.id 
-          ? { ...p, name: newProjectName } 
-          : p
+      const updatedProject = await renameProject(selectedProject.id, newProjectName, token);
+      setProjects(projects.map((p) =>
+        p.id === selectedProject.id ? updatedProject : p
       ));
-
       setRenameOpen(false);
       setNewProjectName("");
       setSelectedProject(null);
     } catch (err) {
-      setError(err.message || "Error processing request. Please try again.");
+      setError(err.message || "Error renaming project. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -220,28 +233,12 @@ const ProjectsSection = () => {
     setIsLoading(true);
     setError("");
     try {
-      const response = await fetch(
-        `https://api2.docgen.dev/api/v1/project/delete-project/${selectedProject.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok)
-        throw new Error(data.message || "Failed to delete project");
-
-      // Remove the project from the local state
-      setProjects(projects.filter(p => p.id !== selectedProject.id));
-
+      await deleteProject(selectedProject.id, token);
+      setProjects(projects.filter((p) => p.id !== selectedProject.id));
       setDeleteOpen(false);
       setSelectedProject(null);
     } catch (err) {
-      setError(err.message || "Error processing request. Please try again.");
+      setError(err.message || "Error deleting project. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -280,20 +277,13 @@ const ProjectsSection = () => {
     setDeleteOpen(true);
   };
 
-  // Filter projects based on search and status
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch =
-      project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+  // Filter projects based on search (removed status filter as it's not used with new APIs)
+  const filteredProjects = projects.filter((project) =>
+    project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+    project.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+  );
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && project.is_active !== false) ||
-      (statusFilter === "inactive" && project.is_active === false);
-
-    return matchesSearch && matchesStatus;
-  });
-
+  // UI remains completely unchanged
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <div className="space-y-6 p-10 mt-8">
@@ -309,37 +299,32 @@ const ProjectsSection = () => {
             </Button>
           </div>
 
-          {/* Search and Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search projects..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-10 w-full"
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 w-full"
+              />
+              {searchTerm && (
+                <X
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
+                  onClick={() => setSearchTerm("")}
                 />
-         
-                {searchTerm && (
-                  <X
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
-                    onClick={() => setSearchTerm("")}
-                  />
-                )}
-              </div>
+              )}
             </div>
-
+          </div>
         </header>
 
-        {/* Error Alert */}
         {fetchError && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4 mr-2" />
-            <AlertDescription>{fetchError}</AlertDescription>
+            <AlertDescription dangerouslySetInnerHTML={{ __html: fetchError }} />
           </Alert>
         )}
 
-        {/* Projects Grid */}
         <Suspense fallback={<ProjectsGridSkeleton />}>
           {fetchingProjects ? (
             <ProjectsGridSkeleton />
@@ -351,24 +336,23 @@ const ProjectsSection = () => {
                   className="overflow-hidden shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] cursor-pointer border border-border bg-background rounded-2xl"
                   onClick={() => goToProject(project.id)}
                 >
-                  {/* <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div> */}
                   <CardHeader className="pb-3">
                     <CardTitle className="flex justify-between items-center text-lg font-semibold text-foreground">
                       <span className="truncate">{project.name}</span>
                       <Suspense fallback={<div className="h-5 w-5"></div>}>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={e => openRenameDialog(project, e)}>
+                            <DropdownMenuItem onClick={(e) => openRenameDialog(project, e)}>
                               <Pencil className="h-4 w-4 mr-2" />
                               Rename
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={e => openDeleteDialog(project, e)}>
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => openDeleteDialog(project, e)}>
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -418,7 +402,6 @@ const ProjectsSection = () => {
           )}
         </Suspense>
 
-        {/* Create Project Dialog */}
         <Dialog open={open} onOpenChange={setOpen}>
           <Suspense fallback={<LoadingSpinner />}>
             <DialogContent className="sm:max-w-md">
@@ -461,7 +444,6 @@ const ProjectsSection = () => {
           </Suspense>
         </Dialog>
 
-        {/* Rename Project Dialog */}
         <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
           <Suspense fallback={<LoadingSpinner />}>
             <DialogContent className="sm:max-w-md">
@@ -499,7 +481,6 @@ const ProjectsSection = () => {
           </Suspense>
         </Dialog>
 
-        {/* Delete Project Dialog */}
         <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <Suspense fallback={<LoadingSpinner />}>
             <DialogContent className="sm:max-w-md">
@@ -540,7 +521,7 @@ const ProjectsSection = () => {
   );
 };
 
-// Reusable Input Field Component
+// Reusable components remain unchanged
 const InputField = ({ label, value, setValue }) => (
   <div className="grid grid-cols-4 items-center gap-4">
     <Label className="text-right">{label}</Label>
@@ -552,12 +533,10 @@ const InputField = ({ label, value, setValue }) => (
   </div>
 );
 
-// Loading Spinner
 const LoadingSpinner = () => (
   <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto"></div>
 );
 
-// Project Grid Skeleton
 const ProjectsGridSkeleton = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {[1, 2, 3].map((i) => (
@@ -580,7 +559,6 @@ const ProjectsGridSkeleton = () => (
   </div>
 );
 
-// Empty State Component
 const EmptyProjectState = ({ setOpen }) => (
   <Card className="overflow-hidden">
     <div className="h-1 bg-primary/20"></div>

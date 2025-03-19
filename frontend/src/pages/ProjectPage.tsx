@@ -1,729 +1,585 @@
 import { useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, PlusCircle, Users, FileText, X, Plus, File, Clock, ChevronRight, Download, Search } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import {
+  Plus,
+  FolderKanban,
+  AlertCircle,
+  Clock,
+  Users,
+  GitBranch,
+  Search,
+  X,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import Sidebar from "@/components/dashboard/Sidebar";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { v4 as uuidv4 } from "uuid";
-// Custom Components
-import ImportRepoModal from "../components/ImportRepoModal";
-import EmptyState from "../components/EmptyState";
-import MdPreview from "../components/MdPreview";
-import { LoadingAnimation } from "@/AppRoutes";
-import { Folder, GitBranch, FileCheck } from "lucide-react"; // Add Folder icon
-import { ScrollArea } from "@/components/ui/scroll-area"; // Ensure ScrollArea is imported
-import { Copy } from "lucide-react"; // Add Copy icon
-import ReactMarkdown from "react-markdown"; // For markdown rendering
+import { useDebounce } from "use-debounce";
 
+// Lazy-loaded UI components (unchanged)
+const components = {
+  Button: lazy(() => import("@/components/ui/button").then((mod) => ({ default: mod.Button }))),
+  Input: lazy(() => import("@/components/ui/input").then((mod) => ({ default: mod.Input }))),
+  Label: lazy(() => import("@/components/ui/label").then((mod) => ({ default: mod.Label }))),
+  Card: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.Card }))),
+  CardContent: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardContent }))),
+  CardHeader: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardHeader }))),
+  CardTitle: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardTitle }))),
+  CardDescription: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardDescription }))),
+  CardFooter: lazy(() => import("@/components/ui/card").then((mod) => ({ default: mod.CardFooter }))),
+  Dialog: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.Dialog }))),
+  DialogContent: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogContent }))),
+  DialogHeader: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogHeader }))),
+  DialogTitle: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogTitle }))),
+  DialogFooter: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogFooter }))),
+  DialogClose: lazy(() => import("@/components/ui/dialog").then((mod) => ({ default: mod.DialogClose }))),
+  Alert: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.Alert }))),
+  AlertDescription: lazy(() => import("@/components/ui/alert").then((mod) => ({ default: mod.AlertDescription }))),
+  Badge: lazy(() => import("@/components/ui/badge").then((mod) => ({ default: mod.Badge }))),
+  DropdownMenu: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenu }))),
+  DropdownMenuTrigger: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuTrigger }))),
+  DropdownMenuContent: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuContent }))),
+  DropdownMenuItem: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuItem }))),
+  DropdownMenuSeparator: lazy(() => import("@/components/ui/dropdown-menu").then((mod) => ({ default: mod.DropdownMenuSeparator }))),
+};
+
+const {
+  Button,
+  Input,
+  Label,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+  Alert,
+  AlertDescription,
+  Badge,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} = components;
+
+// API Functions using DocGen endpoints
+const BASE_URL = "https://api2.docgen.dev/api/v1";
 
 const GET_PROJECT_API = async (projectId, token) => {
-  try {
-    const response = await fetch(`https://api2.docgen.dev/api/v1/project/get-project/${projectId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch project data');
-    }
-
-    const data = await response.json();
-    return {
-      name: data.name,
-      id: data.id,
-      collaborators: data.collaborator_count
-    };
-  } catch (error) {
-    console.error("Project fetch error:", error);
-    throw new Error(`API Error: ${error.message}`);
-  }
+  const response = await fetch(`${BASE_URL}/project/get-project/${projectId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Failed to fetch project data");
+  const data = await response.json();
+  return { name: data.name, id: data.id, collaborators: data.collaborator_count };
 };
 
-const GET_REPOS_API = async (projectId, userId, token) => {
-  try {
-    // In a real implementation, this would make an API call instead of using localStorage
-    const storedRepos = localStorage.getItem(`repos_${projectId}_${userId}`);
-    return storedRepos ? JSON.parse(storedRepos) : [];
-  } catch (error) {
-    console.error("Error retrieving repositories:", error);
-    return [];
-  }
+const GET_REPOS_API = async (projectId, token) => {
+  const response = await fetch(`${BASE_URL}/list-repositories/${projectId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Failed to fetch repositories");
+  return await response.json();
 };
 
-const IMPORT_REPO_API = async (projectId, userId, repoData, token) => {
-  try {
-    const storedFilesKey = `files_${projectId}_${repoData.url}`;
-    const storedFiles = localStorage.getItem(storedFilesKey);
-    let files = repoData.files || (storedFiles ? JSON.parse(storedFiles) : ["README.md"]);
-
-    if (!Array.isArray(files)) {
-      console.warn("Invalid file data, using fallback");
-      files = ["README.md"];
-    }
-
-    localStorage.setItem(storedFilesKey, JSON.stringify(files));
-
-    const newRepo = {
-      id: uuidv4(),
+const CREATE_REPO_API = async (projectId, repoData, token) => {
+  const response = await fetch(`${BASE_URL}/repo/create-repository`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      project_id: projectId,
       name: repoData.name,
-      url: repoData.url,
-      type: repoData.type,
-      source: repoData.source,
-      files,
-      userId,
-      projectId,
-      documentationHistory: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return newRepo;
-  } catch (error) {
-    console.error("Error importing repository:", error);
-    throw new Error(`Import Error: ${error.message}`);
-  }
+      source: "github",
+      repo_url: repoData.url,
+      storage_path: `/repos/${projectId}/${repoData.name.toLowerCase().replace(/\s+/g, '-')}`,
+      created_at: new Date().toISOString(),
+      last_generated_at: null,
+      last_generated_by: null,
+    }),
+  });
+  if (!response.ok) throw new Error("Failed to create repository");
+  return await response.json();
 };
 
-const GENERATE_DOCS_API = async (repo, token) => {
-  try {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // Mock documentation generation
-    const mockDocs = `
-# ${repo.name} Documentation
-
-## Overview
-This is a clean, minimalistic documentation for the ${repo.name} repository.
-
-## Files
-${repo.files.map((file) => `- **${file}**: Automatically generated description`).join("\n")}
-
-## Usage
-\`\`\`javascript
-console.log("Hello from ${repo.name}");
-\`\`\`
-
-Generated on: ${new Date().toLocaleDateString()}
-    `;
-    return mockDocs;
-  } catch (error) {
-    console.error("Error generating documentation:", error);
-    throw new Error(`Generation Error: ${error.message}`);
-  }
+const UPDATE_REPO_API = async (repoId, updateData, token) => {
+  const response = await fetch(`${BASE_URL}/update-repository/${repoId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: updateData.name,
+      source: "github",
+    }),
+  });
+  if (!response.ok) throw new Error("Failed to update repository");
+  return await response.json();
 };
 
-const ProjectRepositories = () => {
+const DELETE_REPO_API = async (repoId, token) => {
+  const response = await fetch(`${BASE_URL}/delete-repository/${repoId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Failed to delete repository");
+  return await response.json();
+};
+
+const ProjectPage = () => {
   const { id: projectId } = useParams();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
 
+  // State hooks (unchanged)
+  const [open, setOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [repoName, setRepoName] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+  const [newRepoName, setNewRepoName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [project, setProject] = useState(null);
   const [repositories, setRepositories] = useState([]);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isRepoPreviewOpen, setIsRepoPreviewOpen] = useState(false);
+  const [fetchingRepos, setFetchingRepos] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const [selectedRepo, setSelectedRepo] = useState(null);
-  const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
-  const [documentation, setDocumentation] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [collaborators, setCollaborators] = useState(0);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState("repositories");
-  const [permission, setPermission] = useState("read");
   const [searchTerm, setSearchTerm] = useState("");
-  const [repoFilter, setRepoFilter] = useState("all");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
-  const JWT_TOKEN = localStorage.getItem("token") || "mock-token";
+  const JWT_TOKEN = localStorage.getItem("token");
 
-  // Fetch project and repositories data
+  // Fetch project and repositories on mount
   useEffect(() => {
-
-    if (localStorage.getItem("token") == undefined || localStorage.getItem("token") == null) {
-      navigate('/')
-    }
-    const fetchData = async () => {
-      if (localStorage.getItem("token") == undefined || localStorage.getItem("token") == null) {
-        navigate('/')
-      }
-      try {
-        const projectData = await GET_PROJECT_API(projectId, JWT_TOKEN);
-        const repoData = await GET_REPOS_API(projectId, user?.id, JWT_TOKEN);
-        setProject(projectData);
-        setRepositories(repoData);
-        setCollaborators(projectData.collaborators || 0);
-      } catch (error) {
-        toast.error("Failed to load project data");
-        console.error(error);
-      }
-    };
-
-    if (projectId && user?.id) {
-      fetchData();
-    }
-  }, [projectId, user?.id, JWT_TOKEN]);
-
-  // Filter repositories based on search term and filter selection
-  const filteredRepositories = repositories.filter(repo => {
-    const matchesSearch = repo.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = repoFilter === "all" ? true : repo.source === repoFilter;
-    return matchesSearch && matchesFilter;
-  });
-
-  const handleImportSubmit = async (url, type, source, files) => {
-    try {
-      const name = url.split("/").pop().replace(/\.git$/, "") || "New Repository";
-      const repoData = { name, url, type, source, files };
-
-      const newRepo = await IMPORT_REPO_API(projectId, user?.id, repoData, JWT_TOKEN);
-      const updatedRepos = [...repositories, newRepo];
-      setRepositories(updatedRepos);
-
-      localStorage.setItem(`repos_${projectId}_${user?.id}`, JSON.stringify(updatedRepos));
-      localStorage.removeItem(`repos_${projectId}`);
-      toast.success("Repository imported successfully");
-      setIsImportModalOpen(false);
-    } catch (error) {
-      toast.error("Failed to import repository");
-      console.error("Import error:", error);
-    }
-  };
-
-  const handleRepoClick = (repo) => {
-    setSelectedRepo(repo);
-    setIsRepoPreviewOpen(true);
-  };
-
-  const renderFileExplorer = (files) => {
-    return (
-      <div className="w-72 flex-shrink-0 bg-[rgb(13_17_23_/_0.3)] border-r border-gray-600">
-        <div className="p-4 border-b border-gray-600">
-          <h3 className="text-sm font-semibold text-gray-200">Files</h3>
-        </div>
-        <ScrollArea className="h-[calc(60vh-112px)]">
-          <div className="p-4">
-            {files.length > 0 ? (
-              files.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 py-2 text-sm text-gray-300 hover:bg-gray-700/50 rounded-md transition-colors duration-200"
-                >
-                  <FileText className="h-4 w-4 text-teal-400" />
-                  <span className="truncate">{file}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-400 italic">No files available</p>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  };
-  const generateDocumentation = async () => {
-    if (!selectedRepo) return;
-
-    setIsGeneratingDocs(true);
-    setProgress(0);
-
-    const steps = [
-      "Reading files...",
-      "Cleaning data...",
-      "Extracting insights...",
-      "Generating documentation...",
-    ];
-
-    // Simulate progress steps
-    for (let i = 0; i < steps.length; i++) {
-      toast.info(steps[i]);
-      setProgress(((i + 1) / steps.length) * 100);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    try {
-      const docs = await GENERATE_DOCS_API(selectedRepo, JWT_TOKEN);
-      const timestamp = new Date().toISOString();
-
-      // Add new documentation to history
-      const updatedHistory = [...(selectedRepo.documentationHistory || []), { content: docs, timestamp }];
-
-      // Update the repository with new documentation
-      const updatedRepos = repositories.map((repo) =>
-        repo.id === selectedRepo.id
-          ? {
-            ...repo,
-            documentation: docs,
-            documentationHistory: updatedHistory,
-            updatedAt: timestamp
-          }
-          : repo
-      );
-
-      setRepositories(updatedRepos);
-      setDocumentation({ content: docs, repoId: selectedRepo.id });
-
-      // Update selected repo reference to include new documentation
-      setSelectedRepo(updatedRepos.find(repo => repo.id === selectedRepo.id));
-
-      // Update localStorage
-      localStorage.setItem(`repos_${projectId}_${user?.id}`, JSON.stringify(updatedRepos));
-      toast.success("Documentation generated successfully");
-    } catch (error) {
-      toast.error("Failed to generate documentation");
-      console.error("Documentation generation error:", error);
-    } finally {
-      setIsGeneratingDocs(false);
-      setProgress(0);
-    }
-  };
-
-  const handleInviteCollaborator = (email) => {
-    if (!email || !email.includes('@')) {
-      toast.error("Please enter a valid email address");
+    if (!JWT_TOKEN) {
+      navigate("/");
       return;
     }
-
-    toast.success(`Invitation sent to ${email} with ${permission} access`);
-    setCollaborators((prev) => prev + 1);
-    setIsInviteModalOpen(false);
-    setPermission("read");
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  // Loading state
-  if (!project) {
-
-    return (
-      <div className="flex h-screen items-center justify-center rgb(13 17 23 / 0.3) text-gray-200">
-        <LoadingAnimation />
-      </div>
-    );
-  }
-
-  const DocumentationPreview = ({ content, repoName, onClose, onDownload }) => {
-    const [activeTab, setActiveTab] = useState("preview"); // Toggle between Preview and Raw
-
-    const handleCopy = () => {
-      navigator.clipboard.writeText(content);
-      toast.success("Copied to clipboard!");
+    const fetchData = async () => {
+      setFetchingRepos(true);
+      setFetchError("");
+      try {
+        const [projectData] = await Promise.all([
+          GET_PROJECT_API(projectId, JWT_TOKEN),
+          // GET_REPOS_API(projectId, JWT_TOKEN),
+        ]);
+        console.log(projectData)
+        setProject(projectData);
+        // setRepositories(repoData);
+      } catch (err) {
+        setFetchError(err.message || "Error fetching data. Please try again.");
+      } finally {
+        setFetchingRepos(false);
+      }
     };
+    if (projectId) fetchData();
+  }, [projectId, JWT_TOKEN, navigate]);
 
-    return (
-      <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl bg-[#0d1117] text-[#c9d1d9] border  rounded-lg p-0">
-          <div className="flex flex-col h-[80vh] w-full bg-[#0d1117] rounded-lg overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-3 bg-[#161b22] border-b border-[#30363d]">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#f85149]" />
-                <div className="w-3 h-3 rounded-full bg-[#f0883e]" />
-                <div className="w-3 h-3 rounded-full bg-[#2ea043]" />
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-center font-medium text-[#c9d1d9]">
-                  Documentation - {repoName || "Unnamed"}
-                </span>
-                <div className="flex gap-1 bg-[#21262d] rounded-md p-1 mr-10">
-                  <button
-                    onClick={() => setActiveTab("preview")}
-                    className={`px-3 py-1 text-sm rounded-md ${activeTab === "preview"
-                      ? "bg-[#30363d] text-[#c9d1d9]"
-                      : "text-[#8b949e] hover:bg-[#30363d] hover:text-[#c9d1d9]"
-                      }`}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("raw")}
-                    className={`px-3 py-1 text-sm rounded-md ${activeTab === "raw"
-                      ? "bg-[#30363d] text-[#c9d1d9]"
-                      : "text-[#8b949e] hover:bg-[#30363d] hover:text-[#c9d1d9]"
-                      }`}
-                  >
-                    Raw
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Scrollable Content */}
-            <ScrollArea className="flex-1 p-6 bg-[#0d1117] text-[#c9d1d9]">
-              {activeTab === "preview" ? (
-                <div className="prose prose-invert max-w-none">
-                  <ReactMarkdown>{content}</ReactMarkdown>
-                </div>
-              ) : (
-                <pre className="text-sm text-[#c9d1d9] bg-[#161b22] p-4 rounded-md border border-[#30363d] whitespace-pre-wrap">
-                  {content}
-                </pre>
-              )}
-            </ScrollArea>
-
-            {/* Footer with Actions */}
-            <div className="p-4 border-t border-[#30363d] bg-[#161b22] flex justify-end gap-2">
-              <Button
-                onClick={handleCopy}
-                variant="outline"
-                className="bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d] hover:text-[#e6edf3] flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                Copy
-              </Button>
-              <Button
-                onClick={onDownload}
-                className="bg-[#238636] hover:bg-[#2ea043] text-white font-medium py-2 px-4 rounded-md flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-
-  // Render content based on active section
-  const renderContent = () => {
-    switch (activeSection) {
-      case "pricing":
-        navigate('/dashboard'); break;
-      case "projects":
-        navigate('/dashboard'); break;
-      case "settings":
-        navigate('/dashboard'); break;
-      case "docs":
-        navigate("/docs");
-        return null;
+  // Handle repository creation
+  const handleCreateRepo = async () => {
+    if (!repoName.trim() || !repoUrl.trim()) {
+      setError("Repository name and URL cannot be empty");
+      return;
+    }
+    setIsLoading(true);
+    setError("");
+    try {
+      const repoData = { name: repoName, url: repoUrl };
+      const newRepo = await CREATE_REPO_API(projectId, repoData, JWT_TOKEN);
+      setRepositories((prev) => [...prev, newRepo]);
+      toast.success("Repository created successfully");
+      setOpen(false);
+      setRepoName("");
+      setRepoUrl("");
+    } catch (err) {
+      setError(err.message || "Error creating repository. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Handle repository rename
+  const handleRenameRepo = async () => {
+    if (!newRepoName.trim()) {
+      setError("Repository name cannot be empty");
+      return;
+    }
+    setIsLoading(true);
+    setError("");
+    try {
+      const updatedRepo = await UPDATE_REPO_API(selectedRepo.id, { name: newRepoName }, JWT_TOKEN);
+      setRepositories((prev) =>
+        prev.map((r) => (r.id === selectedRepo.id ? updatedRepo : r))
+      );
+      toast.success("Repository renamed successfully");
+      setRenameOpen(false);
+      setNewRepoName("");
+      setSelectedRepo(null);
+    } catch (err) {
+      setError(err.message || "Error renaming repository. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle repository delete
+  const handleDeleteRepo = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      await DELETE_REPO_API(selectedRepo.id, JWT_TOKEN);
+      setRepositories((prev) => prev.filter((r) => r.id !== selectedRepo.id));
+      toast.success("Repository deleted successfully");
+      setDeleteOpen(false);
+      setSelectedRepo(null);
+    } catch (err) {
+      setError(err.message || "Error deleting repository. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Format date (unchanged)
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp);
+    return isNaN(date.getTime())
+      ? "N/A"
+      : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  };
+
+  // Navigate to repository details
+  const goToRepo = (repoId) => {
+    navigate(`/repo/${repoId}`);
+    const repo = repositories.find((r) => r.id === repoId);
+    if (repo) toast.info(`Navigated to repository: ${repo.name}`);
+  };
+
+  const openRenameDialog = (repo, e) => {
+    e.stopPropagation();
+    setSelectedRepo(repo);
+    setNewRepoName(repo.name);
+    setRenameOpen(true);
+  };
+
+  const openDeleteDialog = (repo, e) => {
+    e.stopPropagation();
+    setSelectedRepo(repo);
+    setDeleteOpen(true);
+  };
+
+  // Filter repositories (unchanged)
+  const filteredRepos = repositories.filter((repo) =>
+    repo.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+    (repo.repo_url && repo.repo_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
+  );
+
+  // UI remains completely unchanged
   return (
-    <div className="flex h-screen rgb(13 17 23 / 0.3) text-gray-200 overflow-hidden mt-5">
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="border-b border-gray-700 p-4 flex items-center justify-between rgb(13 17 23 / 0.3)">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="text-gray-400 hover:text-white hover:bg-gray-600 rounded-full p-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-medium text-white">{project.name || "repositories"}</h1>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsInviteModalOpen(true)}
-            className="text-muted-foreground hover:text-foreground border-border flex items-center gap-2"
-          >
-            <Users className="h-4 w-4" />
-            <span>{collaborators} Collaborators</span>
-            <Plus className="h-3 w-3 ml-1" />
-          </Button>
-        </header>
-
-        {/* Main Content */}
-        <main className="p-6 flex-1 overflow-y-auto rgb(13 17 23 / 0.3)">
-          <div className="flex justify-between items-center mb-6 gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search projects..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-10 w-full"
-                />
-
-                {searchTerm && (
-                  <X
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
-                    onClick={() => setSearchTerm("")}
-                  />
-                )}
-              </div>
+    <Suspense fallback={<LoadingSpinner />}>
+      <div className="space-y-6 p-10 mt-8">
+        <header className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{project?.name || "Repositories"}</h1>
+              <p className="text-muted-foreground">Manage your project repositories</p>
             </div>
-
-            {/* Create Repo Button */}
-            <Button
-              onClick={() => setIsImportModalOpen(true)}
-              className="bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md flex items-center gap-2 transition-all duration-200"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Create Repo
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Repository
             </Button>
           </div>
 
-
-
-
-          {/* Repository Grid */}
-          {filteredRepositories.length === 0 ? (
-            <div className="text-center text-gray-400">
-              {searchTerm || repoFilter !== "all" ? (
-                <div className="py-10">
-                  <p className="text-lg">No matching repositories found.</p>
-                  <Button
-                    variant="link"
-                    className="text-teal-500 mt-2"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setRepoFilter("all");
-                    }}
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              ) : (
-                <EmptyState onImportRepo={() => setIsImportModalOpen(true)} />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search repositories..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-10 w-full"
+              />
+              {searchTerm && (
+                <X
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
+                  onClick={() => setSearchTerm("")}
+                />
               )}
             </div>
+          </div>
+        </header>
+
+        {fetchError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>{fetchError}</AlertDescription>
+          </Alert>
+        )}
+
+        <Suspense fallback={<ProjectsGridSkeleton />}>
+          {fetchingRepos ? (
+            <ProjectsGridSkeleton />
+          ) : filteredRepos.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredRepos.map((repo) => (
+                <Card
+                  key={repo.id}
+                  className="overflow-hidden shadow-lg transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] cursor-pointer border border-border bg-background rounded-2xl"
+                  onClick={() => goToRepo(repo.id)}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex justify-between items-center text-lg font-semibold text-foreground">
+                      <span className="truncate">{repo.name}</span>
+                      <Suspense fallback={<div className="h-5 w-5"></div>}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => openRenameDialog(repo, e)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => openDeleteDialog(repo, e)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Suspense>
+                    </CardTitle>
+                    <CardDescription className="truncate text-muted-foreground text-sm">
+                      {repo.repo_url || "No URL provided"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-3 space-y-2">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4 mr-1 text-primary" />
+                      <div>Created: {formatDate(repo.created_at)}</div>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4 mr-1 text-primary" />
+                      <div>Updated: {formatDate(repo.last_generated_at) || "Never"}</div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-2 border-t border-border bg-muted/40 rounded-b-2xl">
+                    <div className="flex justify-between w-full text-sm">
+                      <div className="flex items-center gap-1">
+                        <GitBranch className="h-4 w-4 text-primary" />
+                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                          N/A files
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-primary" />
+                        <Badge variant="outline" className="px-2 py-1 text-xs font-medium">
+                          {project?.collaborators || 0} collaborators
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : repositories.length > 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No repositories match your search criteria
+            </div>
           ) : (
-            <div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRepositories.map((repo) => (
-                  <div
-                    key={repo.id}
-                    onClick={() => handleRepoClick(repo)}
-                    className="bg-gradient-to-br rgb(13 14 22 / var(--tw-bg-opacity)) rounded-xl p-5 cursor-pointer 
-            hover:shadow-lg hover:-translate-y-1 transform transition-all duration-300 group shadow-md"
-                  >
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-4">
-                      <h3
-                        className="text-lg font-semibold text-white truncate group-hover:text-[#a3bffa] transition-colors"
-                        title={repo.name}
-                      >
-                        {repo.name}
-                      </h3>
-                      <ChevronRight className="h-5 w-5 text-[#8b949e] group-hover:text-[#a3bffa] transition-colors" />
-                    </div>
-
-                    {/* Metadata */}
-                    <div className="flex flex-col gap-2 text-sm text-[#c9d1d9]">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center">
-                          <Clock className="h-4 w-4 mr-2 text-[#58a6ff]" />
-                          <span className="font-medium">{formatDate(repo.updatedAt)}</span>
-                        </span>
-                        <span className="px-2 py-1 bg-[#2a2e4a] text-[#79c0ff] text-xs rounded-full">
-                          {repo.source || "Local"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center">
-                          <File className="h-4 w-4 mr-2 text-[#58a6ff]" />
-                          <span>{repo.files?.length || 0} Files</span>
-                        </span>
-                        <span className="flex items-center">
-                          <FileText className="h-4 w-4 mr-2 text-[#58a6ff]" />
-                          <span>{repo.documentationHistory?.length || 0} Docs</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Subtle Footer */}
-                    <div className="mt-4 pt-3 border-t border-[#3b3f5c]/50 flex justify-end">
-                      <span className="text-xs text-[#8b949e] italic">
-                        Last updated: {formatDate(repo.updatedAt)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <EmptyRepoState setOpen={setOpen} />
           )}
-        </main>
+        </Suspense>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Repository</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <InputField label="Name" value={repoName} setValue={setRepoName} />
+                <InputField label="URL" value={repoUrl} setValue={setRepoUrl} />
+                {error && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button" disabled={isLoading}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  onClick={handleCreateRepo}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Creating..." : "Create"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Suspense>
+        </Dialog>
+
+        <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Rename Repository</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <InputField label="New Name" value={newRepoName} setValue={setNewRepoName} />
+                {error && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button" disabled={isLoading}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  onClick={handleRenameRepo}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Renaming..." : "Rename"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Suspense>
+        </Dialog>
+
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <Suspense fallback={<LoadingSpinner />}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Delete Repository</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-muted-foreground">
+                  Are you sure you want to delete repository{" "}
+                  <span className="font-semibold">{selectedRepo?.name}</span>? This action cannot be undone.
+                </p>
+                {error && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" type="button" disabled={isLoading}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteRepo}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Deleting..." : "Delete"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Suspense>
+        </Dialog>
       </div>
-
-      {/* Repository Preview Popup */}
-      <Dialog
-        open={isRepoPreviewOpen}
-        onOpenChange={(open) => {
-          setIsRepoPreviewOpen(open);
-          if (!open) setSelectedRepo(null);
-        }}
-      >
-        <DialogContent className="max-w-4xl bg-[#2A3A3A] text-gray-200 border border-gray-600 rounded-lg p-0">
-          {selectedRepo && (
-            <div className="flex h-[60vh] w-full bg-[#1A2525] rounded-lg overflow-hidden border border-gray-600">
-              {/* Enhanced File Explorer Sidebar */}
-              {renderFileExplorer(selectedRepo.files || [])}
-
-              {/* Main Content Area */}
-              <div className="flex-1 flex flex-col">
-                {/* Title Bar */}
-                <div className="flex items-center justify-between p-2 bg-[#2A3A3A] border-b border-gray-600">
-                  <span className="text-sm font-medium text-gray-200">
-                    {selectedRepo.name} - Preview
-                  </span>
-                </div>
-
-                {/* Main Content */}
-                <ScrollArea className="flex-1 p-6 bg-[#1A2525] text-gray-200">
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-lg font-semibold text-white mb-4">
-                        Repository: {selectedRepo.name}
-                      </h2>
-                      <p className="text-sm text-gray-400">
-                        {selectedRepo.files?.length || 0} files in this repository
-                      </p>
-                    </div>
-
-                    {selectedRepo.documentationHistory?.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-white mb-3">Documentation Versions</h3>
-                        {selectedRepo.documentationHistory.map((doc, index, arr) => {
-                          const version = `V_${Math.floor(arr.length - index)}.${index + 1}.0`; // Simple versioning
-                          return (
-                            <div
-                              key={index}
-                              className="p-3 bg-[rgb(13_17_23_/_0.3)] rounded-md border border-gray-600 mb-2 cursor-pointer hover:bg-gray-600 transition-colors duration-200"
-                              onClick={() => setDocumentation({ content: doc.content, repoId: selectedRepo.id })}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-teal-400" />
-                                <span className="text-sm font-medium text-gray-200">{version}</span>
-                                <span className="text-xs text-gray-400">
-                                  {new Date(doc.timestamp).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-
-                {/* Status Bar */}
-                <div className="h-6 border-t border-gray-600 bg-[#1A2525] flex items-center px-3 justify-between">
-                  <div className="flex items-center text-xs text-gray-400">
-                    <GitBranch className="h-3.5 w-3.5 mr-1" />
-                    main
-                  </div>
-                  <div className="flex items-center text-xs text-gray-400">
-                    <FileCheck className="h-3.5 w-3.5 mr-1" />
-                    {selectedRepo.files?.length || 0} files
-                  </div>
-                </div>
-
-                {/* Action Bar */}
-                <div className="p-4 border-t border-gray-600 bg-[#1A2525]">
-                  {isGeneratingDocs ? (
-                    <div className="space-y-2">
-                      <div
-                        style={{ width: `${progress}%` }}
-                        className="h-2 bg-teal-500 rounded-full transition-all duration-1000"
-                      />
-                      <p className="text-sm text-gray-400 text-center">Generating...</p>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={generateDocumentation}
-                      className="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      {selectedRepo.documentation ? "Regenerate Docs" : "Generate Docs"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Invite Collaborator Modal */}
-      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
-        <DialogContent className="rgb(13 17 23 / 0.3) text-gray-200 border border-gray-600 rounded-lg">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-medium text-white">Invite a Collaborator</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleInviteCollaborator(e.target.email.value);
-            }}
-          >
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-gray-200 font-medium">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  name="email"
-                  placeholder="Enter email"
-                  className="w-full p-2 mt-1 rgb(13 17 23 / 0.3) border border-gray-600 rounded-md text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="permission" className="text-gray-200 font-medium">Permission</Label>
-                <Select value={permission} onValueChange={setPermission}>
-                  <SelectTrigger id="permission" className="w-full mt-1 rgb(13 17 23 / 0.3) border-gray-600 text-gray-200">
-                    <SelectValue placeholder="Select permission" />
-                  </SelectTrigger>
-                  <SelectContent className="rgb(13 17 23 / 0.3) text-gray-200 border-gray-600">
-                    <SelectItem value="read">Read</SelectItem>
-                    <SelectItem value="edit">Edit</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button type="submit" className="w-full mt-4 bg-teal-500 hover:bg-teal-600 text-white font-medium py-2 px-4 rounded-md">
-              Send Invite
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Import Repository Modal */}
-      <ImportRepoModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        onImport={handleImportSubmit}
-        projectId={projectId}
-      />
-      {/* Documentation Preview */}
-      {documentation && (
-        <DocumentationPreview
-          content={documentation.content}
-          repoName={selectedRepo?.name}
-          onClose={() => setDocumentation(null)}
-          onDownload={() => {
-            const blob = new Blob([documentation.content], { type: "text/markdown" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${selectedRepo?.name || "document"}_docs.md`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        />
-      )}
-    </div>
+    </Suspense>
   );
 };
 
-export default ProjectRepositories;
+// Reusable components remain unchanged
+const InputField = ({ label, value, setValue }) => (
+  <div className="grid grid-cols-4 items-center gap-4">
+    <Label className="text-right">{label}</Label>
+    <Input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      className="col-span-3"
+    />
+  </div>
+);
+
+const LoadingSpinner = () => (
+  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary mx-auto"></div>
+);
+
+const ProjectsGridSkeleton = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="animate-pulse">
+        <div className="h-1 bg-gray-300 w-full"></div>
+        <div className="p-6 space-y-4">
+          <div className="h-5 bg-gray-300 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-300 rounded w-full"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+          </div>
+          <div className="flex justify-between pt-2">
+            <div className="h-6 bg-gray-300 rounded w-1/4"></div>
+            <div className="h-6 bg-gray-300 rounded w-1/4"></div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const EmptyRepoState = ({ setOpen }) => (
+  <Card className="overflow-hidden">
+    <div className="h-1 bg-primary/20"></div>
+    <CardContent className="flex flex-col items-center justify-center py-12">
+      <div className="rounded-full bg-primary/10 p-3 mb-4">
+        <FolderKanban className="h-6 w-6 text-primary" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">No Repositories Yet</h3>
+      <p className="text-muted-foreground text-center mb-4">
+        Create your first repository to get started.
+      </p>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4 mr-2" />
+        Create Repository
+      </Button>
+    </CardContent>
+  </Card>
+);
+
+export default ProjectPage;

@@ -31,6 +31,10 @@ const Sidebar = () => {
     if (user != null && (localStorage.getItem('token') == null || localStorage.getItem("token") === undefined)) {
       navigate('/');
     }
+    console.log(window.location)
+    if(window.location.pathname.startsWith('/repo')){
+      setIsCollapsed(true)
+    }
   }, [user, navigate]); // Dependencies: user and navigate
 
   // Extracts user initials for AvatarFallback
