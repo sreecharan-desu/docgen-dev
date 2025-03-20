@@ -48,11 +48,6 @@ const Tabs = React.lazy(() => import("@/components/ui/tabs").then(mod => ({ defa
 const TabsList = React.lazy(() => import("@/components/ui/tabs").then(mod => ({ default: mod.TabsList })));
 const TabsTrigger = React.lazy(() => import("@/components/ui/tabs").then(mod => ({ default: mod.TabsTrigger })));
 const TabsContent = React.lazy(() => import("@/components/ui/tabs").then(mod => ({ default: mod.TabsContent })));
-const Select = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.Select })));
-const SelectTrigger = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectTrigger })));
-const SelectValue = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectValue })));
-const SelectContent = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectContent })));
-const SelectItem = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectItem })));
 
 // API utility with retry logic
 const apiCall = async (url, options, retries = 3) => {
@@ -69,13 +64,27 @@ const apiCall = async (url, options, retries = 3) => {
 };
 
 const BASE_URL = "https://api2.docgen.dev/api/v1";
-const JWT_TOKEN = localStorage.getItem("token");
+
+const deepEqual = (obj1, obj2) => {
+  if (obj1 === obj2) return true;
+  if (!obj1 || !obj2 || typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  if (keys1.length !== keys2.length) return false;
+  return keys1.every(key => deepEqual(obj1[key], obj2[key]));
+};
+
+const formatDate = (timestamp) => {
+  if (!timestamp) return "N/A";
+  const date = new Date(timestamp);
+  return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+};
 
 const ProjectPage = memo(() => {
   const { id: projectId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [debouncedSearchTerm] = useDebounce(state => state.searchTerm, 300);
+  const [debouncedSearchTerm] = useDebounce(state => state.searchTerm, 300); // Will fix below
 
   const [state, setState] = useState({
     open: false,
@@ -92,32 +101,97 @@ const ProjectPage = memo(() => {
     selectedRepo: null,
     searchTerm: "",
     activeTab: "github",
-    githubUsername: "",
     githubRepos: [],
-    selectedGithubRepo: "",
     repoType: "public",
     localFolderName: "",
-    localFiles: null
+    localFiles: null,
+    hasGithubAccess: false,
+    installationId: null,
   });
 
-  const fetchProjectData = useCallback(async (force = false) => {
-    if (JWT_TOKEN == undefined) {
+  const checkGithubAccess = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
       navigate("/");
       return;
     }
+    try {
+      const response = await apiCall(`${BASE_URL}/github/check-repo-access`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      setState(prev => ({
+        ...prev,
+        hasGithubAccess: response.has_access,
+        installationId: response.installation_id,
+      }));
+      if (!response.has_access) {
+        toast.info("Please authorize GitHub access to import repositories");
+      }
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        errors: { githubAccess: "Failed to check GitHub access: " + error.message },
+      }));
+    }
+  }, [navigate]);
 
+  const fetchGithubRepos = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      setState(prev => ({ ...prev, isLoading: true }));
+      const accessCheck = await apiCall(`${BASE_URL}/github/check-repo-access`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      if (!accessCheck.has_access) {
+        window.location.href = `${BASE_URL}/github/authorize-app`;
+        return;
+      }
+      const response = await apiCall(`${BASE_URL}/github/repositories`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const formattedRepos = response.repositories.map(repo => ({
+        name: repo.name,
+        url: repo.html_url,
+        full_name: repo.full_name,
+        visibility: repo.visibility,
+      }));
+      setState(prev => ({
+        ...prev,
+        githubRepos: formattedRepos,
+        isLoading: false,
+        installationId: response.installation_id,
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        errors: { github: "Failed to fetch GitHub repositories: " + error.message },
+        isLoading: false,
+      }));
+      toast.error("Failed to fetch GitHub repositories");
+    }
+  }, []);
+
+  const fetchProjectData = useCallback(async (force = false) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/");
+      return;
+    }
     try {
       const [projectData, reposData] = await Promise.all([
         apiCall(`${BASE_URL}/project/get-project/${projectId}`, {
           method: "GET",
-          headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         }),
         apiCall(`${BASE_URL}/repositories/list-repositories?project_id=${projectId}`, {
           method: "GET",
-          headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
-        })
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        }),
       ]);
-
       setState(prev => {
         const newProject = { name: projectData.name, id: projectData.id, collaborators: projectData.collaborator_count };
         if (force || !deepEqual(prev.project, newProject) || !deepEqual(prev.repositories, reposData)) {
@@ -128,9 +202,19 @@ const ProjectPage = memo(() => {
     } catch (err) {
       setState(prev => ({ ...prev, errors: { fetch: err.message || "Error fetching data" }, hasFetched: true }));
     }
-  }, [projectId, JWT_TOKEN]);
+  }, [projectId, navigate]);
 
   const handleCreateRepo = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    if (state.activeTab === "github" && !state.hasGithubAccess) {
+      setState(prev => ({ ...prev, errors: { create: "Please authorize GitHub access first" } }));
+      toast.info("Redirecting to GitHub authorization...");
+      window.location.href = `${BASE_URL}/github/authorize-app`;
+      return;
+    }
+
     let finalRepoName = state.repoName;
     let finalRepoUrl = state.repoUrl;
     let source = state.activeTab;
@@ -144,12 +228,49 @@ const ProjectPage = memo(() => {
       finalRepoUrl = null;
       source = "local";
     } else if (state.activeTab === "github") {
-      if (!state.selectedGithubRepo) {
-        setState(prev => ({ ...prev, errors: { create: "Please select a GitHub repository" } }));
+      if (!state.repoUrl) {
+        setState(prev => ({ ...prev, errors: { create: "Please enter a repository URL" } }));
         return;
       }
-      finalRepoName = state.selectedGithubRepo;
-      finalRepoUrl = state.githubRepos.find(repo => repo.name === state.selectedGithubRepo)?.url;
+      try {
+        setState(prev => ({ ...prev, isLoading: true }));
+        const endpoint =
+          state.repoType === "public"
+            ? `${BASE_URL}/github/import-public-repository`
+            : `${BASE_URL}/github/import-repository`;
+        const repoData =
+          state.repoType === "public"
+            ? { project_id: projectId, repo_url: state.repoUrl }
+            : { project_id: projectId, repo_full_name: state.repoUrl.replace("https://github.com/", ""), installation_id: state.installationId };
+        const newRepo = await apiCall(endpoint, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(repoData),
+        });
+        setState(prev => ({
+          ...prev,
+          repositories: [...prev.repositories, newRepo],
+          open: false,
+          repoName: "",
+          repoUrl: "",
+          githubRepos: [],
+          localFolderName: "",
+          localFiles: null,
+          activeTab: "github",
+          isLoading: false,
+          errors: { ...prev.errors, create: null }, // Clear error on success
+        }));
+        toast.success("Repository imported successfully");
+        navigate(`/repo/${newRepo.id}`);
+      } catch (error) {
+        setState(prev => ({
+          ...prev,
+          errors: { create: error.message || "Error importing repository" },
+          isLoading: false,
+        }));
+        toast.error("Failed to import repository");
+      }
+      return;
     }
 
     if (!finalRepoName.trim()) {
@@ -159,10 +280,9 @@ const ProjectPage = memo(() => {
 
     setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const repoData = { name: finalRepoName, url: finalRepoUrl, source };
       const newRepo = await apiCall(`${BASE_URL}/repositories/create-repository`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           project_id: projectId,
           name: finalRepoName,
@@ -180,23 +300,23 @@ const ProjectPage = memo(() => {
         open: false,
         repoName: "",
         repoUrl: "",
-        githubUsername: "",
         githubRepos: [],
-        selectedGithubRepo: "",
         localFolderName: "",
         localFiles: null,
         activeTab: "github",
-        isLoading: false
+        isLoading: false,
+        errors: { ...prev.errors, create: null },
       }));
       toast.success("Repository created successfully");
       navigate(`/repo/${newRepo.id}`);
     } catch (err) {
       setState(prev => ({ ...prev, errors: { create: err.message || "Error creating repository" }, isLoading: false }));
     }
-  }, [state.activeTab, state.repoName, state.repoUrl, state.localFiles, state.localFolderName, state.selectedGithubRepo, state.githubRepos, projectId]);
+  }, [state.activeTab, state.repoName, state.repoUrl, state.localFiles, state.localFolderName, state.repoType, state.installationId, state.hasGithubAccess, projectId, navigate]);
 
   const handleRenameRepo = useCallback(async () => {
-    if (!state.newRepoName.trim()) {
+    const token = localStorage.getItem("token");
+    if (!token || !state.newRepoName.trim()) {
       setState(prev => ({ ...prev, errors: { rename: "Repository name cannot be empty" } }));
       return;
     }
@@ -204,16 +324,17 @@ const ProjectPage = memo(() => {
     try {
       const updatedRepo = await apiCall(`${BASE_URL}/repositories/update-repository/${state.selectedRepo.id}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ name: state.newRepoName, source: "github" }),
       });
       setState(prev => ({
         ...prev,
-        repositories: prev.repositories.map(r => r.id === state.selectedRepo.id ? updatedRepo : r),
+        repositories: prev.repositories.map(r => (r.id === state.selectedRepo.id ? updatedRepo : r)),
         renameOpen: false,
         newRepoName: "",
         selectedRepo: null,
-        isLoading: false
+        isLoading: false,
+        errors: { ...prev.errors, rename: null },
       }));
       toast.success("Repository renamed successfully");
     } catch (err) {
@@ -222,33 +343,27 @@ const ProjectPage = memo(() => {
   }, [state.newRepoName, state.selectedRepo]);
 
   const handleDeleteRepo = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await apiCall(`${BASE_URL}/repositories/delete-repository/${state.selectedRepo.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       });
       setState(prev => ({
         ...prev,
         repositories: prev.repositories.filter(r => r.id !== state.selectedRepo.id),
         deleteOpen: false,
         selectedRepo: null,
-        isLoading: false
+        isLoading: false,
+        errors: { ...prev.errors, delete: null },
       }));
       toast.success("Repository deleted successfully");
     } catch (err) {
       setState(prev => ({ ...prev, errors: { delete: err.message || "Error deleting repository" }, isLoading: false }));
     }
   }, [state.selectedRepo]);
-
-  const fetchGithubRepos = useCallback(() => {
-    const mockRepos = [
-      { name: "repo1", url: `https://github.com/${state.githubUsername}/repo1` },
-      { name: "repo2", url: `https://github.com/${state.githubUsername}/repo2` },
-      { name: "repo3", url: `https://github.com/${state.githubUsername}/repo3` },
-    ];
-    setState(prev => ({ ...prev, githubRepos: mockRepos }));
-  }, [state.githubUsername]);
 
   const handleFolderSelect = useCallback((e) => {
     const files = e.target.files;
@@ -261,36 +376,31 @@ const ProjectPage = memo(() => {
     }
   }, []);
 
+  // Initial fetch and GitHub access check
   useEffect(() => {
-    if (!state.hasFetched) {
+    const token = localStorage.getItem("token");
+    if (token && user && !state.hasFetched) {
       fetchProjectData(true);
+      checkGithubAccess();
     }
-  }, [fetchProjectData]);
+  }, [user, state.hasFetched, fetchProjectData, checkGithubAccess]);
 
+  // Poll for GitHub access after redirection
   useEffect(() => {
-    if (state.hasFetched) {
-      fetchProjectData();
+    if (!state.hasGithubAccess && state.hasFetched) {
+      const interval = setInterval(async () => {
+        await checkGithubAccess();
+        if (state.hasGithubAccess) clearInterval(interval);
+      }, 2000);
+      return () => clearInterval(interval);
     }
-  }, [projectId]);
+  }, [state.hasGithubAccess, state.hasFetched, checkGithubAccess]);
 
-  const deepEqual = (obj1, obj2) => {
-    if (obj1 === obj2) return true;
-    if (!obj1 || !obj2 || typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
-    const keys1 = Object.keys(obj1);
-    const keys2 = Object.keys(obj2);
-    if (keys1.length !== keys2.length) return false;
-    return keys1.every(key => deepEqual(obj1[key], obj2[key]));
-  };
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "N/A";
-    const date = new Date(timestamp);
-    return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  };
-
+  // Fixed debounced search term
+  const [debouncedSearchTermFixed] = useDebounce(state.searchTerm, 300);
   const filteredRepos = state.repositories.filter(repo =>
-    repo.name.toLowerCase().includes(debouncedSearchTerm(state).toLowerCase()) ||
-    (repo.repo_url && repo.repo_url.toLowerCase().includes(debouncedSearchTerm(state).toLowerCase()))
+    repo.name.toLowerCase().includes(debouncedSearchTermFixed.toLowerCase()) ||
+    (repo.repo_url && repo.repo_url.toLowerCase().includes(debouncedSearchTermFixed.toLowerCase()))
   );
 
   return (
@@ -307,7 +417,10 @@ const ProjectPage = memo(() => {
               </div>
               <p className="text-muted-foreground">Manage your project repositories</p>
             </div>
-            <Button onClick={() => setState(prev => ({ ...prev, open: true }))}>
+            <Button
+              onClick={() => setState(prev => ({ ...prev, open: true }))}
+              disabled={state.activeTab === "github" && !state.hasGithubAccess}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Repository
             </Button>
@@ -366,18 +479,23 @@ const ProjectPage = memo(() => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={e => {
-                          e.stopPropagation();
-                          setState(prev => ({ ...prev, selectedRepo: repo, newRepoName: repo.name, renameOpen: true }));
-                        }}>
+                        <DropdownMenuItem
+                          onClick={e => {
+                            e.stopPropagation();
+                            setState(prev => ({ ...prev, selectedRepo: repo, newRepoName: repo.name, renameOpen: true }));
+                          }}
+                        >
                           <Pencil className="h-4 w-4 mr-2" />
                           Rename
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={e => {
-                          e.stopPropagation();
-                          setState(prev => ({ ...prev, selectedRepo: repo, deleteOpen: true }));
-                        }}>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setState(prev => ({ ...prev, selectedRepo: repo, deleteOpen: true }));
+                          }}
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -430,34 +548,16 @@ const ProjectPage = memo(() => {
                 <TabsContent value="github">
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right col-span-1">GitHub Username</Label>
-                      <div className="col-span-3 flex gap-2">
+                      <Label className="text-right col-span-1">Repository URL</Label>
+                      <div className="col-span-3">
                         <Input
-                          value={state.githubUsername}
-                          onChange={e => setState(prev => ({ ...prev, githubUsername: e.target.value }))}
-                          placeholder="Enter GitHub username or profile URL"
+                          value={state.repoUrl}
+                          onChange={e => setState(prev => ({ ...prev, repoUrl: e.target.value }))}
+                          placeholder="https://github.com/username/repo"
+                          disabled={!state.hasGithubAccess}
                         />
-                        <Button onClick={fetchGithubRepos} disabled={!state.githubUsername.trim()}>Search</Button>
                       </div>
                     </div>
-                    {state.githubRepos.length > 0 && (
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right col-span-1">Repository</Label>
-                        <div className="col-span-3 flex gap-2">
-                          <Select value={state.selectedGithubRepo} onValueChange={value => setState(prev => ({ ...prev, selectedGithubRepo: value }))}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a repository" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {state.githubRepos.map(repo => (
-                                <SelectItem key={repo.name} value={repo.name}>{repo.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button onClick={() => toast.info("Import functionality will be implemented later.")}>Import</Button>
-                        </div>
-                      </div>
-                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label className="text-right col-span-1">Repository Type</Label>
                       <div className="col-span-3 flex gap-4">
@@ -480,11 +580,18 @@ const ProjectPage = memo(() => {
                             value="private"
                             checked={state.repoType === "private"}
                             onChange={() => setState(prev => ({ ...prev, repoType: "private" }))}
+                            disabled={!state.hasGithubAccess}
                           />
                           <Label htmlFor="private">Private (Own)</Label>
                         </div>
                       </div>
                     </div>
+                    {state.errors.github && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        <AlertDescription>{state.errors.github}</AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </TabsContent>
                 <TabsContent value="local">
@@ -529,12 +636,16 @@ const ProjectPage = memo(() => {
               <DialogClose asChild>
                 <Button variant="outline" disabled={state.isLoading}>Cancel</Button>
               </DialogClose>
-              <Button onClick={handleCreateRepo} disabled={state.isLoading}>
+              <Button
+                onClick={handleCreateRepo}
+                disabled={state.isLoading || (state.activeTab === "github" && !state.hasGithubAccess)}
+              >
                 {state.isLoading ? "Importing..." : "Import Repository"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      
 
         <Dialog open={state.renameOpen} onOpenChange={open => setState(prev => ({ ...prev, renameOpen: open }))}>
           <DialogContent className="sm:max-w-md">
@@ -643,7 +754,7 @@ const EmptyRepoState = memo(({ setOpen }) => (
       </div>
       <h3 className="text-lg font-semibold mb-2">No Repositories Yet</h3>
       <p className="text-muted-foreground text-center mb-4">Create your first repository to get started.</p>
-      <Button variant="outline" onClick={setOpen}>
+      <Button variant="outline" onClick={()=>setOpen()}>
         <Plus className="h-4 w-4 mr-2" />
         Create Repository
       </Button>

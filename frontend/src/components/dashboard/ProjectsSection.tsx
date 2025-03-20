@@ -67,7 +67,6 @@ const formatDate = (timestamp) => {
   return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 };
 
-// Custom hook for API operations
 const useProjectsApi = () => {
   const [projects, setProjects] = useRecoilState(projectsAtom);
   const setProject = useSetRecoilState(projectAtom);
@@ -80,33 +79,53 @@ const useProjectsApi = () => {
     return false;
   }, []);
 
-  useEffect(()=>{
-    if((user == null) || (localStorage.getItem("token") === undefined) || localStorage.getItem("token") == null){
-      navigate('/')
+  // Redirect to login if no user or token
+  useEffect(() => {
+    if (!user || !localStorage.getItem("token")) {
+      navigate('/');
     }
-  },[])
+  }, [user, navigate]);
 
   const fetchProjects = useCallback(async (force = false) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setState(prev => ({ ...prev, errors: { fetch: "No token available" } }));
+      return false;
+    }
 
+    setState(prev => ({ ...prev, isLoading: true }));
     try {
       const newData = await apiCall(`${BASE_URL}/list-projects`, {
         method: "GET",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" }
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
       });
       setState(prev => {
         if (force || !deepEqual(projects, newData)) {
           setProjects(newData);
-          return { ...prev, hasFetched: true };
+          return { ...prev, isLoading: false, hasFetched: true };
         }
-        return { ...prev, hasFetched: true };
+        return { ...prev, isLoading: false, hasFetched: true };
       });
       return true;
     } catch (error) {
       return handleApiError('fetch', error);
     }
-  }, [projects, navigate, handleApiError]);
+  }, [projects, setProjects, handleApiError]);
+
+  // Trigger fetchProjects when token becomes available
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token && user && !state.hasFetched) {
+      fetchProjects(true);
+    }
+  }, [user, state.hasFetched, fetchProjects]);
 
   const createProject = useCallback(async (name, description) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setState(prev => ({ ...prev, errors: { create: "No token available" } }));
+      return false;
+    }
     if (!name.trim() || !description.trim()) {
       setState(prev => ({ ...prev, errors: { ...prev.errors, create: "Fields cannot be empty" } }));
       return false;
@@ -116,7 +135,7 @@ const useProjectsApi = () => {
       const projectData = { name, description, owner_id: user?.id };
       const newProject = await apiCall(`${BASE_URL}/create-project`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(projectData)
       });
       setProjects(prev => [...prev, newProject]);
@@ -130,6 +149,11 @@ const useProjectsApi = () => {
   }, [user, navigate, setProjects, setProject, handleApiError]);
 
   const renameProject = useCallback(async (projectId, newName) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setState(prev => ({ ...prev, errors: { rename: "No token available" } }));
+      return false;
+    }
     if (!newName.trim()) {
       setState(prev => ({ ...prev, errors: { ...prev.errors, rename: "Name cannot be empty" } }));
       return false;
@@ -138,7 +162,7 @@ const useProjectsApi = () => {
     try {
       const updatedProject = await apiCall(`${BASE_URL}/update-project/${projectId}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName })
       });
       setProjects(prev => prev.map(p => p.id === projectId ? updatedProject : p));
@@ -150,11 +174,16 @@ const useProjectsApi = () => {
   }, [setProjects, handleApiError]);
 
   const deleteProject = useCallback(async (projectId) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setState(prev => ({ ...prev, errors: { delete: "No token available" } }));
+      return false;
+    }
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await apiCall(`${BASE_URL}/delete-project/${projectId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" }
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
       });
       setProjects(prev => prev.filter(p => p.id !== projectId));
       setState(prev => ({ ...prev, isLoading: false }));
@@ -174,7 +203,6 @@ const useProjectsApi = () => {
 
   return { projects, ...state, fetchProjects, createProject, renameProject, deleteProject, clearError, setProject };
 };
-
 // Memoized Components
 const SearchHeader = memo(({ searchTerm, setSearchTerm, onCreateClick }) => (
   <header className="mb-8">
