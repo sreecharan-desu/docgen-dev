@@ -101,7 +101,7 @@ const ProjectPage = memo(() => {
   });
 
   const fetchProjectData = useCallback(async (force = false) => {
-    if (!JWT_TOKEN) {
+    if (JWT_TOKEN == undefined) {
       navigate("/");
       return;
     }

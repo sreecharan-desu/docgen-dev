@@ -7,9 +7,13 @@ import {
   Download,
   Copy,
   File,
-  GitBranch,
   FileCheck,
   RefreshCw,
+  Upload,
+  Folder,
+  UserPlus,
+  Users,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -25,8 +29,16 @@ const DialogHeader = React.lazy(() => import("@/components/ui/dialog").then(mod 
 const DialogTitle = React.lazy(() => import("@/components/ui/dialog").then(mod => ({ default: mod.DialogTitle })));
 const Alert = React.lazy(() => import("@/components/ui/alert").then(mod => ({ default: mod.Alert })));
 const AlertDescription = React.lazy(() => import("@/components/ui/alert").then(mod => ({ default: mod.AlertDescription })));
+const Input = React.lazy(() => import("@/components/ui/input").then(mod => ({ default: mod.Input })));
+const Select = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.Select })));
+const SelectTrigger = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectTrigger })));
+const SelectValue = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectValue })));
+const SelectContent = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectContent })));
+const SelectItem = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectItem })));
 
-// API utility with retry logic
+const BASE_URL = "https://api2.docgen.dev/api/v1";
+const JWT_TOKEN = localStorage.getItem("token");
+
 const apiCall = async (url, options, retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -40,12 +52,30 @@ const apiCall = async (url, options, retries = 3) => {
   }
 };
 
-const BASE_URL = "https://api2.docgen.dev/api/v1";
-const JWT_TOKEN = localStorage.getItem("token");
+const buildFileTree = (files) => {
+  const tree = { name: "root", children: [], isFolder: true };
+  files.forEach(file => {
+    const parts = file.split('/');
+    let current = tree;
+    parts.forEach((part, index) => {
+      if (index === parts.length - 1) {
+        current.children.push({ name: part, isFolder: false });
+      } else {
+        let folder = current.children.find(child => child.name === part && child.isFolder);
+        if (!folder) {
+          folder = { name: part, children: [], isFolder: true };
+          current.children.push(folder);
+        }
+        current = folder;
+      }
+    });
+  });
+  return tree;
+};
 
 const RepoPage = memo(() => {
   const { id: repoId } = useParams();
-  const { user } = useAuth();
+  const { user } = useAuth(); // Kept for potential future use
   const navigate = useNavigate();
   const [state, setState] = useState({
     projectId: '',
@@ -55,9 +85,18 @@ const RepoPage = memo(() => {
     isGeneratingDocs: false,
     documentation: null,
     progress: 0,
-    hasFetched: false
+    currentStep: '', // New property to track the current step
+    hasFetched: false,
+    uploadedFiles: [],
+    showUploadDialog: false,
+    selectedFile: null,
+    showInviteDialog: false,
+    collaborators: [],
+    inviteEmail: '',
+    invitePermission: 'read',
+    inviteError: '',
+    expandedFolders: new Set(['root'])
   });
-
   const fetchRepoData = useCallback(async (force = false) => {
     if (!JWT_TOKEN) {
       navigate("/");
@@ -74,16 +113,16 @@ const RepoPage = memo(() => {
       });
 
       setState(prev => {
-        if (force || !deepEqual(prev.repo, newRepoData)) {
-          return {
-            ...prev,
-            repo: newRepoData,
-            projectId: newRepoData.project_id,
-            isLoading: false,
-            hasFetched: true
-          };
-        }
-        return { ...prev, isLoading: false, hasFetched: true };
+        const updatedState = {
+          ...prev,
+          repo: newRepoData,
+          projectId: newRepoData.project_id,
+          isLoading: false,
+          hasFetched: true,
+          showUploadDialog: newRepoData.source === "local" && (!newRepoData.files || newRepoData.files.length === 0),
+          collaborators: [] // Since API is commented out, keeping it empty
+        };
+        return force || !deepEqual(prev.repo, newRepoData) ? updatedState : prev;
       });
     } catch (err) {
       setState(prev => ({
@@ -93,41 +132,51 @@ const RepoPage = memo(() => {
         hasFetched: true
       }));
     }
-  }, [repoId, JWT_TOKEN, navigate]);
+  }, [repoId, navigate]);
+
+  const handleFolderUpload = useCallback((event) => {
+    const files = Array.from(event.target.files);
+    const fileList = files.map(file => file.webkitRelativePath || file.name);
+
+    setState(prev => ({
+      ...prev,
+      uploadedFiles: fileList,
+      repo: {
+        ...prev.repo,
+        files: fileList
+      },
+      showUploadDialog: false
+    }));
+    toast.success("Folder uploaded successfully");
+  }, []);
+
 
   const generateDocs = useCallback(async () => {
     if (!state.repo) return;
+    if (state.repo.source === "local" && state.uploadedFiles.length === 0) {
+      setState(prev => ({ ...prev, showUploadDialog: true }));
+      return;
+    }
 
-    setState(prev => ({ ...prev, isGeneratingDocs: true, progress: 0 }));
     const steps = ["Reading files...", "Cleaning data...", "Extracting insights...", "Generating documentation..."];
+    setState(prev => ({ ...prev, isGeneratingDocs: true, progress: 0, currentStep: steps[0] }));
 
     try {
       for (let i = 0; i < steps.length; i++) {
+        setState(prev => ({ ...prev, currentStep: steps[i], progress: ((i + 1) / steps.length) * 100 }));
         toast.info(steps[i]);
-        setState(prev => ({ ...prev, progress: ((i + 1) / steps.length) * 100 }));
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       const docs = await apiCall(`${BASE_URL}/repositories/generate-docs/${state.repo.id}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${JWT_TOKEN}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${JWT_TOKEN}`, "Content-Type": "application/json" },
         body: JSON.stringify({ repo: state.repo }),
       });
 
       const timestamp = new Date().toISOString();
-      const updatedHistory = [
-        ...(state.repo.documentationHistory || []),
-        { content: docs.content || docs, timestamp },
-      ];
-      const updatedRepo = {
-        ...state.repo,
-        documentation: docs.content || docs,
-        documentationHistory: updatedHistory,
-        updatedAt: timestamp,
-      };
+      const updatedHistory = [...(state.repo.documentationHistory || []), { content: docs.content || docs, timestamp }];
+      const updatedRepo = { ...state.repo, documentation: docs.content || docs, documentationHistory: updatedHistory, updatedAt: timestamp };
 
       setState(prev => ({
         ...prev,
@@ -135,7 +184,8 @@ const RepoPage = memo(() => {
         documentation: { content: docs.content || docs, repoId: state.repo.id },
         isGeneratingDocs: false,
         progress: 0,
-        errors: { ...prev.errors, generate: undefined } // Clear generate error on success
+        currentStep: '',
+        errors: { ...prev.errors, generate: undefined }
       }));
       toast.success("Documentation generated successfully");
     } catch (err) {
@@ -143,23 +193,51 @@ const RepoPage = memo(() => {
         ...prev,
         errors: { ...prev.errors, generate: err.message || "Failed to generate documentation" },
         isGeneratingDocs: false,
-        progress: 0
+        progress: 0,
+        currentStep: ''
       }));
       toast.error(err.message || "Failed to generate documentation");
     }
-  }, [state.repo]);
+  }, [state.repo, state.uploadedFiles]);
+
+  const inviteCollaborator = useCallback(async () => {
+    if (!state.inviteEmail) {
+      toast.error("Please enter an email address");
+      return;
+    }
+
+    try {
+      await apiCall(`${BASE_URL}/repositories/${repoId}/invite`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${JWT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: state.inviteEmail,
+          permission: state.invitePermission,
+          repoId: repoId
+        }),
+      });
+
+      setState(prev => ({
+        ...prev,
+        collaborators: [...prev.collaborators, { email: state.inviteEmail, permission: state.invitePermission }],
+        showInviteDialog: false,
+        inviteEmail: '',
+        invitePermission: 'read'
+      }));
+      toast.success(`Successfully invited ${state.inviteEmail}`);
+    } catch (err) {
+      toast.error("Failed to invite collaborator: " + err.message);
+    }
+  }, [state.inviteEmail, state.invitePermission, repoId]);
 
   useEffect(() => {
     if (!state.hasFetched) {
       fetchRepoData(true);
     }
   }, [fetchRepoData]);
-
-  useEffect(() => {
-    if (state.hasFetched) {
-      fetchRepoData();
-    }
-  }, [repoId]);
 
   const deepEqual = (obj1, obj2) => {
     if (obj1 === obj2) return true;
@@ -176,30 +254,150 @@ const RepoPage = memo(() => {
     return isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
   };
 
-  const FileExplorer = memo(({ files }) => (
-    <div className="w-72 flex-shrink-0 bg-background border-r border-border">
-      <div className="p-5 border-b border-border">
-        <h3 className="text-xl font-semibold text-foreground">Files</h3>
-      </div>
-      <ScrollArea className="h-[calc(100vh-200px)]">
-        <div className="p-4">
-          {files?.length > 0 ? (
-            files.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 py-2 text-sm text-muted-foreground hover:bg-muted rounded-md transition-colors duration-200"
-              >
-                <File className="h-4 w-4 text-primary" />
-                <span className="truncate">{file}</span>
+  const FileExplorer = memo(({ files }) => {
+    const fileTree = buildFileTree(files || []);
+
+    const toggleFolder = (path) => {
+      setState(prev => {
+        const newExpanded = new Set(prev.expandedFolders);
+        if (newExpanded.has(path)) newExpanded.delete(path);
+        else newExpanded.add(path);
+        return { ...prev, expandedFolders: newExpanded };
+      });
+    };
+
+    const renderTree = (node, path = "root") => (
+      <div className={node.name !== "root" ? "ml-4" : ""}>
+        {node.isFolder ? (
+          <div>
+            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground hover:bg-muted rounded-md transition-colors duration-200 cursor-pointer">
+              <button onClick={() => toggleFolder(path)} className="flex items-center gap-1 flex-1">
+                {state.expandedFolders.has(path) ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+                <Folder className="h-4 w-4 text-primary" />
+                <span className="truncate">{node.name}</span>
+              </button>
+            </div>
+            {state.expandedFolders.has(path) && (
+              <div>
+                {node.children.map(child => renderTree(child, `${path}/${child.name}`))}
               </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground italic">No files available</p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 py-2 text-sm rounded-md transition-colors duration-200">
+            <div
+              className={`flex items-center gap-2 flex-1 cursor-pointer ${state.selectedFile === path
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted"
+                }`}
+              onClick={() => setState(prev => ({ ...prev, selectedFile: path }))}
+            >
+              <File className="h-4 w-4 text-primary" />
+              <span className="truncate">{node.name}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="w-72 flex-shrink-0 bg-background border-r border-border">
+        <div className="p-4 border-b border-border flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-foreground">Files</h3>
+          {state.repo?.source === "local" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setState(prev => ({ ...prev, showUploadDialog: true }))}
+            >
+              <Upload className="h-4 w-4" />
+            </Button>
           )}
         </div>
-      </ScrollArea>
-    </div>
+        <ScrollArea className="h-[calc(100vh-200px)]">
+          <div className="p-4">
+            {files?.length > 0 ? renderTree(fileTree) : (
+              <p className="text-sm text-muted-foreground italic">No files available</p>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  });
+
+  const UploadDialog = memo(() => (
+    <Dialog open={state.showUploadDialog} onOpenChange={(open) => setState(prev => ({ ...prev, showUploadDialog: open }))}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Upload Code Folder</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <Input
+            type="file"
+            webkitdirectory="true"
+            directory=""
+            multiple
+            onChange={handleFolderUpload}
+            className="w-full"
+          />
+          <p className="text-sm text-muted-foreground mt-2">
+            Select a folder containing your code files
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   ));
+
+  const InviteDialog = memo(() => {
+    const [email, setEmail] = useState(state.inviteEmail);
+    const [permission, setPermission] = useState(state.invitePermission);
+
+    const handleInvite = () => {
+      setState(prev => ({ ...prev, inviteEmail: email, invitePermission: permission }));
+      inviteCollaborator();
+    };
+
+    return (
+      <Dialog open={state.showInviteDialog} onOpenChange={(open) => setState(prev => ({ ...prev, showInviteDialog: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite a Collaborator</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="text-sm text-muted-foreground">Email</label>
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter collaborator's email"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground ">Permission</label>
+              <Select value={permission} onValueChange={setPermission}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select permission" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0d1117] text-white border border-gray-700">
+                  <SelectItem value="read"> <span>Read </span></SelectItem>
+                  <SelectItem value="write"><span>Write</span></SelectItem>
+                  <SelectItem value="admin"><span>Admin</span></SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleInvite} className="w-full">
+              Send Invite
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  });
 
   const DocumentationPreview = memo(({ content, repoName, onClose, onDownload }) => {
     const [activeTab, setActiveTab] = useState("preview");
@@ -212,7 +410,7 @@ const RepoPage = memo(() => {
     return (
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl bg-background text-foreground border border-border rounded-lg p-0">
-          <div className="flex flex-col h-[80vh] w-full rounded-lg overflow-hidden">
+          <div className="flex flex-col h-[80vh] w-full">
             <div className="flex items-center justify-between p-3 bg-muted border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -221,7 +419,7 @@ const RepoPage = memo(() => {
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium">Documentation - {repoName || "Unnamed"}</span>
-                <div className="flex gap-1 bg-muted rounded-md p-1 mr-10">
+                <div className="flex gap-1 bg-muted rounded-md p-1">
                   <button
                     onClick={() => setActiveTab("preview")}
                     className={`px-3 py-1 text-sm rounded-md ${activeTab === "preview" ? "bg-background text-foreground" : "text-muted-foreground hover:bg-background"}`}
@@ -269,13 +467,19 @@ const RepoPage = memo(() => {
           <LoadingAnimation />
         ) : (
           <>
+
             {state.errors.fetch && (
-              <div className="p-10 w-full">
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    {state.errors.fetch}
-                    <Button variant="outline" size="sm" className="ml-4" onClick={() => fetchRepoData(true)}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
+              <div className="p-10 w-full flex items-center justify-center">
+                <Alert variant="destructive" className="max-w-md">
+                  <AlertDescription className="flex items-center justify-between">
+                    <span>{state.errors.fetch}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchRepoData(true)}
+                      className="ml-4 bg-background hover:bg-muted text-foreground border-primary hover:border-primary/80 transition-colors duration-200"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin-hover" />
                       Retry
                     </Button>
                   </AlertDescription>
@@ -299,23 +503,63 @@ const RepoPage = memo(() => {
                       </Button>
                       <h1 className="text-lg font-medium text-foreground">{state.repo.name}</h1>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setState(prev => ({ ...prev, showInviteDialog: true }))}
+                      className="flex items-center gap-2"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Invite Collaborator
+                    </Button>
                   </header>
 
                   <main className="p-6 flex-1 overflow-y-auto">
                     <div className="space-y-6">
                       <div>
                         <h2 className="text-lg font-semibold text-foreground mb-4">Repository Details</h2>
+                        <p className="text-sm text-muted-foreground">Source: {state.repo.source || "N/A"}</p>
                         <p className="text-sm text-muted-foreground">URL: {state.repo.url || "N/A"}</p>
                         <p className="text-sm text-muted-foreground">
                           Files: {state.repo.files?.length || 0} | Created: {formatDate(state.repo.createdAt)} | Updated: {formatDate(state.repo.updatedAt)}
                         </p>
                       </div>
 
+                      {state.selectedFile && (
+                        <div className="bg-muted p-4 rounded-md">
+                          <h3 className="text-sm font-semibold mb-2">Selected File: {state.selectedFile}</h3>
+                          <p className="text-sm text-muted-foreground">Click another file to view its details</p>
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-foreground">Collaborators</h3>
+                        </div>
+                        {state.collaborators.length > 0 ? (
+                          <div className="space-y-2">
+                            {state.collaborators.map((collaborator, index) => (
+                              <div
+                                key={index}
+                                className="p-3 bg-muted rounded-md border border-border flex items-center gap-2"
+                              >
+                                <Users className="h-4 w-4 text-primary" />
+                                <span className="text-sm text-foreground">
+                                  {collaborator.email} ({collaborator.permission})
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">No collaborators yet</p>
+                        )}
+                      </div>
+
                       {state.repo.documentationHistory?.length > 0 && (
                         <div>
                           <h3 className="text-sm font-semibold text-foreground mb-3">Documentation Versions</h3>
-                          {state.repo.documentationHistory.map((doc, index, arr) => {
-                            const version = `V_${Math.floor(arr.length - index)}.${index + 1}.0`;
+                          {state.repo.documentationHistory.map((doc, index) => {
+                            const version = `V_${state.repo.documentationHistory.length - index}.0`;
                             return (
                               <div
                                 key={index}
@@ -333,30 +577,38 @@ const RepoPage = memo(() => {
                         </div>
                       )}
 
-                      <div className="mt-6">
+                      <div className="mt-6 flex flex-col items-center justify-center min-h-[150px]">
                         {state.isGeneratingDocs ? (
-                          <div className="space-y-2">
-                            <div style={{ width: `${state.progress}%` }} className="h-2 bg-primary rounded-full transition-all duration-1000" />
-                            <p className="text-sm text-muted-foreground text-center">Generating...</p>
+                          <div className="flex flex-col items-center gap-2 w-full max-w-md">
+                            <div className="w-full">
+                              <div
+                                className="h-2 bg-primary rounded-full transition-all duration-1000"
+                                style={{ width: `${state.progress}%` }}
+                              />
+                            </div>
+                            <p className="text-sm text-muted-foreground">Generating...</p>
                           </div>
                         ) : (
-                          <div className="flex justify-center place-content-center">
-                            {state.errors.generate && (<>
-                              <Alert variant="destructive" className="mb-4">
-                                <AlertDescription>
-                                  {state.errors.generate}
-                                  <Button variant="outline" size="sm" className="ml-4" onClick={generateDocs}>
-                                    <RefreshCw className="h-4 w-4 mr-2" />
+                          <div className="flex flex-col items-center gap-4 w-full max-w-md">
+                            {state.errors.generate && (
+                              <Alert variant="destructive" className="w-full">
+                                <AlertDescription className="flex items-center justify-between">
+                                  <span>{state.errors.generate}</span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={generateDocs}
+                                    className="ml-4 bg-background hover:bg-muted text-foreground border-primary hover:border-primary/80 transition-colors"
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin-hover" />
                                     Retry
                                   </Button>
                                 </AlertDescription>
                               </Alert>
-                              <br />
-                            </>
                             )}
                             <Button
                               onClick={generateDocs}
-                              className="w-1/2 flex items-center justify-center gap-2"
+                              className="w-full flex items-center justify-center gap-2"
                             >
                               <FileText className="h-4 w-4" />
                               {state.repo.documentation ? "Regenerate Docs" : "Generate Docs"}
@@ -364,6 +616,7 @@ const RepoPage = memo(() => {
                           </div>
                         )}
                       </div>
+
                     </div>
                   </main>
 
@@ -391,6 +644,8 @@ const RepoPage = memo(() => {
                     }}
                   />
                 )}
+                <UploadDialog />
+                <InviteDialog />
               </>
             )}
           </>
@@ -399,8 +654,5 @@ const RepoPage = memo(() => {
     </Suspense>
   );
 });
-
-
-
 
 export default RepoPage;

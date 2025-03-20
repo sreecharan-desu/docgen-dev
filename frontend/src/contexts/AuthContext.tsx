@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem("token");
       toast({
         title : "Auth failed",
-        description : "Token validation failed"
+        description : "Token validation failed,please signin again to continue."
       })
       navigate("/")
     } finally {

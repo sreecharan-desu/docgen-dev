@@ -80,11 +80,14 @@ const useProjectsApi = () => {
     return false;
   }, []);
 
-  const fetchProjects = useCallback(async (force = false) => {
-    if (JWT_TOKEN == undefined) {
-      navigate("/");
-      return false;
+  useEffect(()=>{
+    if((user == null) || (localStorage.getItem("token") === undefined) || localStorage.getItem("token") == null){
+      navigate('/')
     }
+  },[])
+
+  const fetchProjects = useCallback(async (force = false) => {
+
     try {
       const newData = await apiCall(`${BASE_URL}/list-projects`, {
         method: "GET",
