@@ -439,11 +439,10 @@ const ImportRepoModal: React.FC<ImportRepoModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent
-        className={`${
-          step === "vscode" || step === "loading"
+        className={`${step === "vscode" || step === "loading"
             ? "max-w-[90vw] max-h-[90vh] p-0"
             : "sm:max-w-[425px]"
-        } bg-[#2A3A3A] text-gray-200 border-gray-600 rounded-lg`}
+          } bg-[#2A3A3A] text-gray-200 border-gray-600 rounded-lg`}
       >
         {step === "files" && renderFileSelection()}
         {step === "vscode" && renderVSCodeInterface()}

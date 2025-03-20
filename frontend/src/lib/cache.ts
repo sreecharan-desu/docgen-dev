@@ -1,3 +1,5 @@
+import { toast } from "@/components/ui/use-toast";
+
 interface CacheItem<T> {
   data: T;
   timestamp: number;
@@ -23,6 +25,16 @@ export class Cache {
 
     if (isExpired) {
       localStorage.removeItem(key);
+      toast({
+        title: "Token expired",
+        description: "Invalid token"
+      })
+
+      setTimeout(() => {
+        location.href = "/"
+
+      }, 2000)      
+      
       return null;
     }
 
@@ -31,5 +43,14 @@ export class Cache {
 
   static remove(key: string): void {
     localStorage.removeItem(key);
+    toast({
+      title: "Token expired",
+      description: "Invalid token"
+    })
+
+    setTimeout(() => {
+      location.href = "/"
+
+    }, 2000)
   }
 }

@@ -60,10 +60,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(userData);
       } else {
         localStorage.removeItem("token");
+        toast({
+          title : "Auth failed",
+          description : "Token expired please signin"
+        })
+        navigate("/")
       }
     } catch (error) {
       console.error("Token validation failed:", error);
       localStorage.removeItem("token");
+      toast({
+        title : "Auth failed",
+        description : "Token validation failed"
+      })
+      navigate("/")
     } finally {
       setLoading(false);
     }
@@ -236,8 +246,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem("token");
+    toast({
+      title : "Logout",
+      description : "Successfully logged out"
+    })
+    navigate("/")
     setUser(null);
-    navigate("/");
   };
 
   const register = async (email: string, password: string, name: string) => {
