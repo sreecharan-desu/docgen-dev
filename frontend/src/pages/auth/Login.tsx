@@ -176,7 +176,7 @@ export default function Login() {
             Or
           </span> */}
         </motion.div>
-{/* 
+
         <motion.div variants={itemVariants}>
           <Button
             type="button"
@@ -192,11 +192,11 @@ export default function Login() {
             )}
             {isGithubLoading ? "Connecting..." : "Continue with GitHub"}
           </Button>
-        </motion.div> */}
-
-        {/* {showEmailForm ? (
-          <motion.form 
-            onSubmit={handleLogin} 
+        </motion.div>
+        {/* 
+        {showEmailForm ? (
+          <motion.form
+            onSubmit={handleLogin}
             className="space-y-4"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -234,16 +234,16 @@ export default function Login() {
             </div>
 
             <div className="flex justify-between items-center">
-              <Link 
-                to="/auth/forgot-password" 
+              <Link
+                to="/auth/forgot-password"
                 className="text-sm text-primary hover:underline"
               >
                 Forgot password?
               </Link>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-12 bg-primary hover:bg-primary/90 transition-all duration-300"
               disabled={isEmailFormLoading}
             >
@@ -272,9 +272,9 @@ export default function Login() {
               Sign in with Email
             </Button>
           </motion.div>
-        )} */}
+        )}
 
-        {/* <motion.p
+         <motion.p
           className="text-center text-sm text-muted-foreground"
           variants={itemVariants}
         >

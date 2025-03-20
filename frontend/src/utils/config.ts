@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL || (
+export const API_URL = (
   window.location.hostname === 'localhost'
     ? 'https://api2.docgen.dev'
     : 'https://api1.docgen.dev'
@@ -6,7 +6,7 @@ export const API_URL = import.meta.env.VITE_API_URL || (
 
 export const getBaseUrl = () => window.location.origin;
 
-export const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || 'Ov23livmcOJdTGJwAtnB';
+export const GITHUB_CLIENT_ID = 'Ov23livmcOJdTGJwAtnB';
 
 export const GOOGLE_CALLBACK_URL = window.location.hostname === 'localhost'
   ? 'https://api2.docgen.dev/api/v1/auth/google-auth-callback'

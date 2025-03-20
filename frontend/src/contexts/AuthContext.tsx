@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useContext, useEffect, useState } from "react";
-import { API_URL, GITHUB_CALLBACK_URL } from "@/utils/config";
+import { API_URL } from "@/utils/config";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 
