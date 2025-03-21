@@ -511,9 +511,9 @@ const RepoPage = memo(() => {
                       <div>
                         <h2 className="text-lg font-semibold text-foreground mb-4">Repository Details</h2>
                         <p className="text-sm text-muted-foreground">Source: {state.repo.source || "N/A"}</p>
-                        <p className="text-sm text-muted-foreground">URL: {state.repo.url || "N/A"}</p>
+                        <p className="text-sm text-muted-foreground">URL: {state.repo.repo_url || "N/A"}</p>
                         <p className="text-sm text-muted-foreground">
-                          Files: {state.repo.files?.length || 0} | Created: {formatDate(state.repo.createdAt)} | Updated: {formatDate(state.repo.updatedAt)}
+                          Files: {state.repo.files?.length || 0} | Created: {formatDate(state.repo.created_at)} | Updated: {formatDate(state.repo.updatedAt)}
                         </p>
                       </div>
 
@@ -571,7 +571,15 @@ const RepoPage = memo(() => {
 
                       <div className="mt-6 flex flex-col items-center justify-center min-h-[150px]">
                         {state.isGeneratingDocs ? (
-                          <DocumentationGenerator/>
+                          <DocumentationGeneratorDialog
+                            open={state.isGeneratingDocs}
+                            onOpenChange={(open) => !open && setState(prev => ({
+                              ...prev,
+                              isGeneratingDocs: false,
+                              progress: 0,
+                              currentStep: ''
+                            }))}
+                          />
                         ) : (
                           <div className="flex flex-col items-center gap-4 w-full max-w-md">
                             {state.errors.generate && (
@@ -642,8 +650,7 @@ const RepoPage = memo(() => {
 export default RepoPage;
 
 
-
-const DocumentationGenerator = () => {
+const DocumentationGeneratorDialog = ({ open, onOpenChange }) => {
   const [progressWidth, setProgressWidth] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const steps = [
@@ -655,7 +662,6 @@ const DocumentationGenerator = () => {
   ];
 
   useEffect(() => {
-    // Progress bar animation
     const progressInterval = setInterval(() => {
       setProgressWidth(prev => {
         if (prev >= 100) {
@@ -666,7 +672,6 @@ const DocumentationGenerator = () => {
       });
     }, 100);
 
-    // Status text animation
     const statusInterval = setInterval(() => {
       setCurrentStep(prev => (prev + 1) % steps.length);
     }, 2000);
@@ -678,19 +683,20 @@ const DocumentationGenerator = () => {
   }, []);
 
   return (
-      <div className="bg-zinc-900 w-full max-w-lg rounded-lg p-6 text-white">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg bg-zinc-900 text-white p-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-green-400">{">"}</span>
           <span className="text-white font-medium">Generating Documentation</span>
         </div>
-        
+
         <div className="flex items-center mb-6 bg-zinc-700 rounded-full h-2 overflow-hidden">
-          <div 
-            className="h-full bg-green-400 rounded-full transition-all duration-300 ease-out" 
+          <div
+            className="h-full bg-green-400 rounded-full transition-all duration-300 ease-out"
             style={{ width: `${progressWidth}%` }}
           ></div>
         </div>
-        
+
         <div className="bg-zinc-800 rounded-md p-4 mb-4">
           <div className="flex items-center mb-6 text-green-400 text-sm">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -698,12 +704,12 @@ const DocumentationGenerator = () => {
             </svg>
             README.md
           </div>
-          
+
           <div className="space-y-4">
             <div className="bg-zinc-700/30 h-3 rounded w-full"></div>
             <div className="bg-zinc-700/30 h-3 rounded w-5/6"></div>
             <div className="bg-zinc-700/30 h-3 rounded w-4/6"></div>
-            
+
             <div className="flex items-center justify-center py-3 text-zinc-500 text-sm font-mono">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
@@ -713,19 +719,21 @@ const DocumentationGenerator = () => {
               </span>
               <span className="ml-1 animate-blink">|</span>
             </div>
-            
+
             <div className="bg-zinc-700/30 h-3 rounded w-5/6"></div>
             <div className="bg-zinc-700/30 h-3 rounded w-full"></div>
             <div className="bg-zinc-700/30 h-3 rounded w-3/6"></div>
           </div>
         </div>
-        
+
         <div className="text-zinc-500 text-xs">
           Processed {Math.min(Math.floor(progressWidth / 20) + 1, 6)} of 6 files
         </div>
-      </div>
+      </DialogContent>
+    </Dialog>
   );
 };
+
 
 // Adding a blink animation for the cursor
 const style = document.createElement('style');
