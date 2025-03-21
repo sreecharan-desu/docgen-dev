@@ -5,6 +5,7 @@ import { useAuth } from "./contexts/AuthContext";
 import ProjectsSection from "./components/dashboard/ProjectsSection";
 import BillingSection from "./components/dashboard/BillingSection";
 import SettingsSection from "./components/dashboard/SettingsSection";
+import GithubSetupComplete from "./pages/auth/GithubSetupComplete";
 
 // Lazy-loaded pages
 const Index = lazy(() => import("./pages/Index"));
@@ -72,10 +73,28 @@ export const AppRoutes = () => {
                 }
               />
               <Route
+                path="/github/setup-error/*"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingAnimation />}>
+                      <Dashboard />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/auth/login"
                 element={
                   <Suspense fallback={<LoadingAnimation />}>
                     <Login />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/github/setup-complete"
+                element={
+                  <Suspense fallback={<LoadingAnimation />}>
+                    <GithubSetupComplete />
                   </Suspense>
                 }
               />

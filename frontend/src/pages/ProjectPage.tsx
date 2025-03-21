@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import React, { useState, useEffect, useCallback, memo, Suspense } from "react";
 import {
   Plus,
@@ -14,6 +14,14 @@ import {
   Trash2,
   ChevronLeft,
   RefreshCw,
+  Loader,
+  Download,
+  FolderUp,
+  Folder,
+  FolderSearch,
+  Eye,
+  Github,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -54,7 +62,10 @@ const apiCall = async (url, options, retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
       const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP error ${response.status}`);
+      }
       return await response.json();
     } catch (error) {
       if (i === retries - 1) throw error;
@@ -84,7 +95,8 @@ const ProjectPage = memo(() => {
   const { id: projectId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [debouncedSearchTerm] = useDebounce(state => state.searchTerm, 300); // Will fix below
+  const location = useLocation();
+  const [debouncedSearchTerm] = useDebounce(state => state.searchTerm, 300);
 
   const [state, setState] = useState({
     open: false,
@@ -107,6 +119,7 @@ const ProjectPage = memo(() => {
     localFiles: null,
     hasGithubAccess: false,
     installationId: null,
+    showRepoList: false,
   });
 
   const checkGithubAccess = useCallback(async () => {
@@ -124,9 +137,12 @@ const ProjectPage = memo(() => {
         ...prev,
         hasGithubAccess: response.has_access,
         installationId: response.installation_id,
+        showRepoList: response.has_access,
       }));
       if (!response.has_access) {
         toast.info("Please authorize GitHub access to import repositories");
+      } else {
+        fetchGithubRepos();
       }
     } catch (error) {
       setState(prev => ({
@@ -141,14 +157,6 @@ const ProjectPage = memo(() => {
     if (!token) return;
     try {
       setState(prev => ({ ...prev, isLoading: true }));
-      const accessCheck = await apiCall(`${BASE_URL}/github/check-repo-access`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      });
-      if (!accessCheck.has_access) {
-        window.location.href = `${BASE_URL}/github/authorize-app`;
-        return;
-      }
       const response = await apiCall(`${BASE_URL}/github/repositories`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -204,96 +212,31 @@ const ProjectPage = memo(() => {
     }
   }, [projectId, navigate]);
 
-  const handleCreateRepo = useCallback(async () => {
+  const handleAuthorizeGithub = useCallback(() => {
+    localStorage.setItem("github_redirect_url", location.pathname + location.search);
+    window.location.href = `${BASE_URL}/github/authorize-app`;
+  }, [location]);
+
+  const handleImportRepo = useCallback(async (repo) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    if (state.activeTab === "github" && !state.hasGithubAccess) {
-      setState(prev => ({ ...prev, errors: { create: "Please authorize GitHub access first" } }));
-      toast.info("Redirecting to GitHub authorization...");
-      window.location.href = `${BASE_URL}/github/authorize-app`;
-      return;
-    }
-
-    let finalRepoName = state.repoName;
-    let finalRepoUrl = state.repoUrl;
-    let source = state.activeTab;
-
-    if (state.activeTab === "local") {
-      if (!state.localFiles || state.localFiles.length === 0) {
-        setState(prev => ({ ...prev, errors: { create: "Please select a folder to upload" } }));
-        return;
-      }
-      finalRepoName = state.localFolderName;
-      finalRepoUrl = null;
-      source = "local";
-    } else if (state.activeTab === "github") {
-      if (!state.repoUrl) {
-        setState(prev => ({ ...prev, errors: { create: "Please enter a repository URL" } }));
-        return;
-      }
-      try {
-        setState(prev => ({ ...prev, isLoading: true }));
-        const endpoint =
-          state.repoType === "public"
-            ? `${BASE_URL}/github/import-public-repository`
-            : `${BASE_URL}/github/import-repository`;
-        const repoData =
-          state.repoType === "public"
-            ? { project_id: projectId, repo_url: state.repoUrl }
-            : { project_id: projectId, repo_full_name: state.repoUrl.replace("https://github.com/", ""), installation_id: state.installationId };
-        const newRepo = await apiCall(endpoint, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(repoData),
-        });
-        setState(prev => ({
-          ...prev,
-          repositories: [...prev.repositories, newRepo],
-          open: false,
-          repoName: "",
-          repoUrl: "",
-          githubRepos: [],
-          localFolderName: "",
-          localFiles: null,
-          activeTab: "github",
-          isLoading: false,
-          errors: { ...prev.errors, create: null }, // Clear error on success
-        }));
-        toast.success("Repository imported successfully");
-        navigate(`/repo/${newRepo.id}`);
-      } catch (error) {
-        setState(prev => ({
-          ...prev,
-          errors: { create: error.message || "Error importing repository" },
-          isLoading: false,
-        }));
-        toast.error("Failed to import repository");
-      }
-      return;
-    }
-
-    if (!finalRepoName.trim()) {
-      setState(prev => ({ ...prev, errors: { create: "Repository name cannot be empty" } }));
-      return;
-    }
-
-    setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const newRepo = await apiCall(`${BASE_URL}/repositories/create-repository`, {
+      setState(prev => ({ ...prev, isLoading: true }));
+      const endpoint = repo.visibility === "public"
+        ? `${BASE_URL}/github/import-public-repository`
+        : `${BASE_URL}/github/import-repository`;
+
+      const repoData = repo.visibility === "public"
+        ? { project_id: projectId, repo_url: repo.url }
+        : { project_id: projectId, repo_full_name: repo.full_name, installation_id: state.installationId };
+
+      const newRepo = await apiCall(endpoint, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_id: projectId,
-          name: finalRepoName,
-          source: source || "github",
-          repo_url: finalRepoUrl || "",
-          storage_path: `/repos/${projectId}/${finalRepoName.toLowerCase().replace(/\s+/g, "-")}`,
-          created_at: new Date().getTime(),
-          last_generated_at: null,
-          last_generated_by: null,
-        }),
+        body: JSON.stringify(repoData),
       });
+
       setState(prev => ({
         ...prev,
         repositories: [...prev.repositories, newRepo],
@@ -307,12 +250,71 @@ const ProjectPage = memo(() => {
         isLoading: false,
         errors: { ...prev.errors, create: null },
       }));
-      toast.success("Repository created successfully");
+      toast.success("Repository imported successfully");
       navigate(`/repo/${newRepo.id}`);
-    } catch (err) {
-      setState(prev => ({ ...prev, errors: { create: err.message || "Error creating repository" }, isLoading: false }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        errors: { create: error.message || "Error importing repository" },
+        isLoading: false,
+      }));
+      toast.error("Failed to import repository");
     }
-  }, [state.activeTab, state.repoName, state.repoUrl, state.localFiles, state.localFolderName, state.repoType, state.installationId, state.hasGithubAccess, projectId, navigate]);
+  }, [projectId, state.installationId, navigate]);
+
+  const handleCreateRepo = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    if (state.activeTab === "local") {
+      if (!state.localFiles || state.localFiles.length === 0) {
+        setState(prev => ({ ...prev, errors: { create: "Please select a folder to upload" } }));
+        return;
+      }
+      const finalRepoName = state.localFolderName;
+      const finalRepoUrl = null;
+      const source = "local";
+
+      setState(prev => ({ ...prev, isLoading: true }));
+      try {
+        const newRepo = await apiCall(`${BASE_URL}/repositories/create-repository`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_id: projectId,
+            name: finalRepoName,
+            source: source,
+            repo_url: finalRepoUrl || "",
+            storage_path: `/repos/${projectId}/${finalRepoName.toLowerCase().replace(/\s+/g, "-")}`,
+            created_at: new Date().getTime(),
+            last_generated_at: null,
+            last_generated_by: null,
+          }),
+        });
+        setState(prev => ({
+          ...prev,
+          repositories: [...prev.repositories, newRepo],
+          open: false,
+          repoName: "",
+          repoUrl: "",
+          githubRepos: [],
+          localFolderName: "",
+          localFiles: null,
+          activeTab: "github",
+          isLoading: false,
+          errors: { ...prev.errors, create: null },
+        }));
+        toast.success("Repository created successfully");
+        navigate(`/repo/${newRepo.id}`);
+      } catch (err) {
+        setState(prev => ({
+          ...prev,
+          errors: { create: err.message || "Error creating repository" },
+          isLoading: false,
+        }));
+      }
+    }
+  }, [state.activeTab, state.localFiles, state.localFolderName, projectId, navigate]);
 
   const handleRenameRepo = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -376,7 +378,6 @@ const ProjectPage = memo(() => {
     }
   }, []);
 
-  // Initial fetch and GitHub access check
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token && user && !state.hasFetched) {
@@ -385,18 +386,6 @@ const ProjectPage = memo(() => {
     }
   }, [user, state.hasFetched, fetchProjectData, checkGithubAccess]);
 
-  // Poll for GitHub access after redirection
-  useEffect(() => {
-    if (!state.hasGithubAccess && state.hasFetched) {
-      const interval = setInterval(async () => {
-        await checkGithubAccess();
-        if (state.hasGithubAccess) clearInterval(interval);
-      }, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [state.hasGithubAccess, state.hasFetched, checkGithubAccess]);
-
-  // Fixed debounced search term
   const [debouncedSearchTermFixed] = useDebounce(state.searchTerm, 300);
   const filteredRepos = state.repositories.filter(repo =>
     repo.name.toLowerCase().includes(debouncedSearchTermFixed.toLowerCase()) ||
@@ -419,7 +408,6 @@ const ProjectPage = memo(() => {
             </div>
             <Button
               onClick={() => setState(prev => ({ ...prev, open: true }))}
-              disabled={state.activeTab === "github" && !state.hasGithubAccess}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Repository
@@ -441,7 +429,7 @@ const ProjectPage = memo(() => {
             )}
           </div>
         </header>
-
+            
         {state.errors.fetch && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4 mr-2" />
@@ -534,139 +522,137 @@ const ProjectPage = memo(() => {
           <EmptyRepoState setOpen={() => setState(prev => ({ ...prev, open: true }))} />
         )}
 
-        <Dialog open={state.open} onOpenChange={open => setState(prev => ({ ...prev, open }))}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Import Repository</DialogTitle>
+        <Dialog open={state.open} onOpenChange={open => setState(prev => ({ ...prev, open, repoUrl: "", localFiles: null, localFolderName: "" }))}>
+          <DialogContent className="sm:max-w-md bg-[#1a1a1a] border border-[#00ff9d] rounded-lg shadow-lg overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[rgb(26,26,26)] to-[#232323] opacity-50 pointer-events-none" />
+
+            <DialogHeader className="flex justify-between items-center border-b border-[#00ff9d]/20 pb-3">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-white text-lg font-semibold">Import Repository</DialogTitle>
+              </div>
+
             </DialogHeader>
+
             <div className="py-4">
+              <p className="text-gray-400 mb-4 flex items-center">
+                <GitBranch className="h-4 w-4 mr-2 text-[#00ff9d]" />
+                Connect your project to a repository
+              </p>
+
               <Tabs value={state.activeTab} onValueChange={tab => setState(prev => ({ ...prev, activeTab: tab }))}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="github">GitHub</TabsTrigger>
-                  <TabsTrigger value="local">Local</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-[#2a2a2a] rounded-md p-1 mb-4">
+                  <TabsTrigger
+                    value="github"
+                    className={`text-white font-medium transition-all duration-200 ${state.activeTab === "github" ? "bg-[#00ff9d] text-black shadow-md" : "bg-transparent hover:bg-[#333333]"} rounded-md`}
+                  >
+                    <Github className="h-4 w-4 mr-2" />
+                    GitHub
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="local"
+                    className={`text-white font-medium transition-all duration-200 ${state.activeTab === "local" ? "bg-[#00ff9d] text-black shadow-md" : "bg-transparent hover:bg-[#333333]"} rounded-md`}
+                  >
+                    <Folder className="h-4 w-4 mr-2" />
+                    Local
+                  </TabsTrigger>
                 </TabsList>
-                <TabsContent value="github">
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right col-span-1">Repository URL</Label>
-                      <div className="col-span-3">
-                        <Input
-                          value={state.repoUrl}
-                          onChange={e => setState(prev => ({ ...prev, repoUrl: e.target.value }))}
-                          placeholder="https://github.com/username/repo"
-                          disabled={!state.hasGithubAccess}
-                        />
-                      </div>
+
+                <TabsContent value="github" className="mt-4 space-y-4">
+                  {!state.hasGithubAccess ? (
+                    <div className="text-center bg-[#2a2a2a]/50 p-6 rounded-lg border border-dashed border-[#00ff9d]/30">
+                      <Github className="h-12 w-12 mx-auto mb-3 text-[#00ff9d]" />
+                      <p className="text-gray-300 mb-4">Authorize GitHub to see and import your repositories</p>
+                      <Button
+                        onClick={handleAuthorizeGithub}
+                        className="bg-[#00ff9d] text-black hover:bg-[#00ff9d]/90 font-medium shadow-lg shadow-[#00ff9d]/20 transition-all duration-200"
+                      >
+                        <Lock className="h-4 w-4 mr-2" />
+                        Authorize GitHub Now
+                      </Button>
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right col-span-1">Repository Type</Label>
-                      <div className="col-span-3 flex gap-4">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            id="public"
-                            name="repoType"
-                            value="public"
-                            checked={state.repoType === "public"}
-                            onChange={() => setState(prev => ({ ...prev, repoType: "public" }))}
-                          />
-                          <Label htmlFor="public">Public</Label>
+                  ) : state.showRepoList && state.githubRepos.length > 0 ? (
+                    <div className="max-h-64 overflow-y-auto pr-1 space-y-2">
+                      {state.githubRepos.map(repo => (
+                        <div
+                          key={repo.url}
+                          className="flex justify-between items-center p-3 rounded-md bg-[#2a2a2a] hover:bg-[#333333] transition-colors duration-200 border-l-2 border-[#00ff9d]"
+                        >
+                          <div>
+                            <p className="text-white font-medium flex items-center">
+                              <GitBranch className="h-4 w-4 mr-2 text-[#00ff9d]" />
+                              {repo.name}
+                            </p>
+                            <p className="text-gray-400 text-sm flex items-center mt-1">
+                              <Eye className="h-3 w-3 mr-1" />
+                              {repo.visibility}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => handleImportRepo(repo)}
+                            className="bg-[#00ff9d] text-black hover:bg-[#00ff9d]/90 shadow-md shadow-[#00ff9d]/10"
+                            disabled={state.isLoading}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Import
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            id="private"
-                            name="repoType"
-                            value="private"
-                            checked={state.repoType === "private"}
-                            onChange={() => setState(prev => ({ ...prev, repoType: "private" }))}
-                            disabled={!state.hasGithubAccess}
-                          />
-                          <Label htmlFor="private">Private (Own)</Label>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                    {state.errors.github && (
-                      <Alert variant="destructive" className="mt-2">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        <AlertDescription>{state.errors.github}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="text-center bg-[#2a2a2a]/50 p-6 rounded-lg border border-dashed border-gray-700">
+                      <FolderSearch className="h-12 w-12 mx-auto mb-3 text-gray-500" />
+                      <p className="text-gray-400">No repositories found</p>
+                    </div>
+                  )}
                 </TabsContent>
-                <TabsContent value="local">
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right col-span-1">Upload Folder</Label>
-                      <div className="col-span-3">
-                        <input
-                          type="file"
-                          webkitdirectory="true"
-                          directory=""
-                          onChange={handleFolderSelect}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
-                        />
+
+                <TabsContent value="local" className="mt-4">
+                  <div className="space-y-4">
+                    <div className="bg-[#2a2a2a]/50 p-4 rounded-lg border border-dashed border-[#00ff9d]/30">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right col-span-1 text-white font-medium">Upload Folder</Label>
+                        <div className="col-span-3">
+                          <div className="relative">
+                            <input
+                              type="file"
+                              webkitdirectory="true"
+                              directory=""
+                              onChange={handleFolderSelect}
+                              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#00ff9d] file:text-black hover:file:bg-[#00ff9d]/90 focus:outline-none"
+                            />
+                            <FolderUp className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
+                          </div>
+                        </div>
                       </div>
                     </div>
+
                     {state.localFolderName && (
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right col-span-1">Folder Name</Label>
-                        <div className="col-span-3">
-                          <Input value={state.localFolderName} readOnly className="bg-transparent cursor-not-allowed" />
+                      <div className="bg-[#2a2a2a]/50 p-4 rounded-lg border border-[#00ff9d]/20 animate-fadeIn">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label className="text-right col-span-1 text-white font-medium">Selected Folder</Label>
+                          <div className="col-span-3">
+                            <div className="relative">
+                              <Input
+                                value={state.localFolderName}
+                                readOnly
+                                className="bg-[#333333] text-white border-[#00ff9d]/40 focus:border-[#00ff9d] cursor-not-allowed pl-9"
+                              />
+                              <Folder className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#00ff9d]" />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
                 </TabsContent>
               </Tabs>
-              {state.errors.create && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  <AlertDescription>
-                    {state.errors.create}
-                    <Button variant="outline" size="sm" className="ml-4" onClick={handleCreateRepo} disabled={state.isLoading}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Retry
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={state.isLoading}>Cancel</Button>
-              </DialogClose>
-              <Button
-                onClick={handleCreateRepo}
-                disabled={state.isLoading || (state.activeTab === "github" && !state.hasGithubAccess)}
-              >
-                {state.isLoading ? "Importing..." : "Import Repository"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      
 
-        <Dialog open={state.renameOpen} onOpenChange={open => setState(prev => ({ ...prev, renameOpen: open }))}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Rename Repository</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">New Name</Label>
-                <Input
-                  value={state.newRepoName}
-                  onChange={e => setState(prev => ({ ...prev, newRepoName: e.target.value }))}
-                  className="col-span-3"
-                />
-              </div>
-              {state.errors.rename && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  <AlertDescription>
-                    {state.errors.rename}
-                    <Button variant="outline" size="sm" className="ml-4" onClick={handleRenameRepo} disabled={state.isLoading}>
+              {state.errors.create && (
+                <Alert variant="destructive" className="mt-4 bg-red-900/20 border border-red-500/50 text-red-200">
+                  <AlertCircle className="h-4 w-4 mr-2 text-red-400" />
+                  <AlertDescription className="flex items-center justify-between w-full">
+                    <span>{state.errors.create}</span>
+                    <Button variant="outline" size="sm" className="ml-4 border-red-500/50 hover:bg-red-900/30 text-red-200" onClick={handleCreateRepo} disabled={state.isLoading}>
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Retry
                     </Button>
@@ -674,14 +660,42 @@ const ProjectPage = memo(() => {
                 </Alert>
               )}
             </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={state.isLoading}>Cancel</Button>
-              </DialogClose>
-              <Button onClick={handleRenameRepo} disabled={state.isLoading}>
-                {state.isLoading ? "Renaming..." : "Rename"}
-              </Button>
-            </DialogFooter>
+
+            {state.activeTab === "local" && (
+              <DialogFooter className="border-t border-[#00ff9d]/20 pt-3 gap-3">
+                <DialogClose asChild>
+                  <Button
+                    variant="outline"
+                    disabled={state.isLoading}
+                    className="text-white border-gray-600 hover:bg-[#2a2a2a] hover:text-[#00ff9d]"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  onClick={handleCreateRepo}
+                  disabled={state.isLoading || !state.localFiles}
+                  className={`
+            bg-[#00ff9d] text-black hover:bg-[#00ff9d]/90 font-medium 
+            shadow-lg shadow-[#00ff9d]/20 transition-all duration-200
+            ${state.isLoading || !state.localFiles ? 'opacity-50 cursor-not-allowed' : ''}
+          `}
+                >
+                  {state.isLoading ? (
+                    <>
+                      <Loader className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Import Repository
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -754,7 +768,7 @@ const EmptyRepoState = memo(({ setOpen }) => (
       </div>
       <h3 className="text-lg font-semibold mb-2">No Repositories Yet</h3>
       <p className="text-muted-foreground text-center mb-4">Create your first repository to get started.</p>
-      <Button variant="outline" onClick={()=>setOpen()}>
+      <Button variant="outline" onClick={() => setOpen()}>
         <Plus className="h-4 w-4 mr-2" />
         Create Repository
       </Button>

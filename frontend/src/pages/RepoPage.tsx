@@ -503,15 +503,7 @@ const RepoPage = memo(() => {
                       </Button>
                       <h1 className="text-lg font-medium text-foreground">{state.repo.name}</h1>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setState(prev => ({ ...prev, showInviteDialog: true }))}
-                      className="flex items-center gap-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Invite Collaborator
-                    </Button>
+
                   </header>
 
                   <main className="p-6 flex-1 overflow-y-auto">
@@ -579,15 +571,7 @@ const RepoPage = memo(() => {
 
                       <div className="mt-6 flex flex-col items-center justify-center min-h-[150px]">
                         {state.isGeneratingDocs ? (
-                          <div className="flex flex-col items-center gap-2 w-full max-w-md">
-                            <div className="w-full">
-                              <div
-                                className="h-2 bg-primary rounded-full transition-all duration-1000"
-                                style={{ width: `${state.progress}%` }}
-                              />
-                            </div>
-                            <p className="text-sm text-muted-foreground">Generating...</p>
-                          </div>
+                          <DocumentationGenerator/>
                         ) : (
                           <div className="flex flex-col items-center gap-4 w-full max-w-md">
                             {state.errors.generate && (
@@ -656,3 +640,103 @@ const RepoPage = memo(() => {
 });
 
 export default RepoPage;
+
+
+
+const DocumentationGenerator = () => {
+  const [progressWidth, setProgressWidth] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const steps = [
+    "Reading file contents...",
+    "Cleaning data...",
+    "Chunking data...",
+    "Giving to AI...",
+    "Formatting output..."
+  ];
+
+  useEffect(() => {
+    // Progress bar animation
+    const progressInterval = setInterval(() => {
+      setProgressWidth(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 1;
+      });
+    }, 100);
+
+    // Status text animation
+    const statusInterval = setInterval(() => {
+      setCurrentStep(prev => (prev + 1) % steps.length);
+    }, 2000);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(statusInterval);
+    };
+  }, []);
+
+  return (
+      <div className="bg-zinc-900 w-full max-w-lg rounded-lg p-6 text-white">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-green-400">{">"}</span>
+          <span className="text-white font-medium">Generating Documentation</span>
+        </div>
+        
+        <div className="flex items-center mb-6 bg-zinc-700 rounded-full h-2 overflow-hidden">
+          <div 
+            className="h-full bg-green-400 rounded-full transition-all duration-300 ease-out" 
+            style={{ width: `${progressWidth}%` }}
+          ></div>
+        </div>
+        
+        <div className="bg-zinc-800 rounded-md p-4 mb-4">
+          <div className="flex items-center mb-6 text-green-400 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            README.md
+          </div>
+          
+          <div className="space-y-4">
+            <div className="bg-zinc-700/30 h-3 rounded w-full"></div>
+            <div className="bg-zinc-700/30 h-3 rounded w-5/6"></div>
+            <div className="bg-zinc-700/30 h-3 rounded w-4/6"></div>
+            
+            <div className="flex items-center justify-center py-3 text-zinc-500 text-sm font-mono">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+              </svg>
+              <span className="min-w-32 text-center transition-opacity duration-300 ease-in-out">
+                {steps[currentStep]}
+              </span>
+              <span className="ml-1 animate-blink">|</span>
+            </div>
+            
+            <div className="bg-zinc-700/30 h-3 rounded w-5/6"></div>
+            <div className="bg-zinc-700/30 h-3 rounded w-full"></div>
+            <div className="bg-zinc-700/30 h-3 rounded w-3/6"></div>
+          </div>
+        </div>
+        
+        <div className="text-zinc-500 text-xs">
+          Processed {Math.min(Math.floor(progressWidth / 20) + 1, 6)} of 6 files
+        </div>
+      </div>
+  );
+};
+
+// Adding a blink animation for the cursor
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .animate-blink {
+    animation: blink 1s step-end infinite;
+  }
+`;
+document.head.appendChild(style);
+

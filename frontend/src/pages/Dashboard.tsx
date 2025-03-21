@@ -25,7 +25,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const location = window.location.pathname;
-    if (location === "/dashboard" && !localStorage.getItem("token")) {
+    if (location === "/dashboard" && localStorage.getItem("token") == undefined) {
       setTimeout(() => navigate("/"), 2000);
     }
   }, []);
