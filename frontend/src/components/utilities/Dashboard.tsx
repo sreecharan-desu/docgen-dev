@@ -5,7 +5,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import BillingSection from "@/components/dashboard/BillingSection";
 import SettingsSection from "@/components/dashboard/SettingsSection";
-import ProjectsSection from "@/components/dashboard/ProjectsSection";
+import ProjectsSection from "@/pages/projectsSection/ProjectsSection";
 import { useNavigate } from "react-router-dom";
 
 // Skeleton loader component
@@ -86,16 +86,6 @@ const Dashboard = () => {
         </div>
 
         <div className="p-4 md:p-8 pt-16 md:pt-8">
-          {/* Breadcrumb Navigation */}
-          <div className="hidden md:flex items-center text-sm text-muted-foreground mb-8">
-            <Home className="h-3.5 w-3.5 mr-1" />
-            <span className="mx-1">Dashboard</span>
-            <ChevronRight className="h-3.5 w-3.5 mx-1 text-muted-foreground/50" />
-            <span className="mx-1 capitalize font-medium">
-              {activeSection.replace("-", " ")}
-            </span>
-          </div>
-
           {/* Content area */}
           <div className="pb-12 relative">
             {/* Main content with skeleton loader */}

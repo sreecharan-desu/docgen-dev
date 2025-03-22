@@ -22,6 +22,7 @@ interface AuthResponse {
 interface AuthContextType {
   id: any;
   user: User | null;
+  setUser: (user: User | null) => void; // Fixed the type definition
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;

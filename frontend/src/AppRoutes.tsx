@@ -1,15 +1,16 @@
 import { Routes, Route, useLocation } from "react-router-dom";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/utilities/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { useAuth } from "./contexts/AuthContext";
-import ProjectsSection from "./components/dashboard/ProjectsSection";
+import ProjectsSection from "./pages/projectsSection/ProjectsSection";
 import BillingSection from "./components/dashboard/BillingSection";
 import SettingsSection from "./components/dashboard/SettingsSection";
 import GithubSetupComplete from "./pages/auth/GithubSetupComplete";
+import { Navbar } from "./components/utilities/Navbar";
 
 // Lazy-loaded pages
 const Index = lazy(() => import("./pages/Index"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Dashboard = lazy(() => import("./components/utilities/Dashboard"));
 const Docs = lazy(() => import("./pages/docs/Index"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
@@ -18,13 +19,11 @@ const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 const EmailVerification = lazy(() => import("./pages/auth/EmailVerification"));
 const GoogleCallback = lazy(() => import("./pages/auth/GoogleCallback"));
 const GitHubCallback = lazy(() => import("./pages/auth/GitHubCallback"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const ProjectPage = lazy(() => import("./pages/ProjectPage"));
+const NotFound = lazy(() => import("./components/utilities/NotFound"));
+const ProjectPage = lazy(() => import("./pages/projectDashboard/ProjectPage"));
 const Sidebar = lazy(() => import("./components/dashboard/Sidebar"));
-const RepoPage = lazy(() => import("./pages/RepoPage"));
-const Navbar = lazy(() =>
-  import("./components/Navbar").then((mod) => ({ default: mod.Navbar }))
-);
+const RepoPage = lazy(() => import("./pages/repoPage/RepoPage"));
+
 
 export const AppRoutes = () => {
   const { user } = useAuth();
