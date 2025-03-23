@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { Terminal, FileCode, Info, Key, Command, Menu, X } from "lucide-react";
+import { Terminal, FileCode, Info, Key, Command, Menu, X, ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface NavItem {
   title: string;
@@ -43,7 +44,7 @@ const navItems: NavItem[] = [
 const DocsPage = () => {
   const [activeSection, setActiveSection] = useState("introduction");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+  const navigate = useNavigate();
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -70,8 +71,15 @@ const DocsPage = () => {
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="p-6">
-     
+        <div className="p-6 -mt-2">
+          {/* Independent Back Button */}
+          <button
+            className="flex items-center justify-center p-1 text-white hover:text-primary transition-colors rounded-full hover:bg-slate-700/50"
+            onClick={() => navigate(-1)} // Navigates back one step in history
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <br />
           <nav className="space-y-1">
             {navItems.map((item) => (
               <div key={item.href}>

@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         localStorage.removeItem("token");
         toast({
-          title : "Auth failed",
+          title : "",
           description : "Session expired ,please signin again to continue."
         })
         navigate("/")
@@ -70,11 +70,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Token validation failed:", error);
       localStorage.removeItem("token");
+      navigate("/");
       toast({
-        title : "Auth failed",
+        title : "",
         description : "Session expired ,please signin again to continue."
       })
-      navigate("/")
     } finally {
       setLoading(false);
     }

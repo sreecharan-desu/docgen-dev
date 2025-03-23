@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useCallback, memo, Suspense } from "react";
+import React, { useState, useEffect, useCallback, memo, Suspense, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
+import { FontLoader } from "three/examples/jsm/loaders/FontLoader";
 import {
   ChevronLeft,
   File,
@@ -19,9 +23,9 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingAnimation } from "@/AppRoutes";
 import { apiMethods } from "@/utils/apis";
-import { deepEqual, formatDate } from "@/utils/functions";
+import { formatDate } from "@/utils/functions";
 
-// Lazy-loaded components
+// Lazy-loaded components (unchanged)
 const Button = React.lazy(() => import("@/components/ui/button").then(mod => ({ default: mod.Button })));
 const Dialog = React.lazy(() => import("@/components/ui/dialog").then(mod => ({ default: mod.Dialog })));
 const DialogContent = React.lazy(() => import("@/components/ui/dialog").then(mod => ({ default: mod.DialogContent })));
@@ -34,10 +38,9 @@ const Card = React.lazy(() => import("@/components/ui/card").then(mod => ({ defa
 const CardContent = React.lazy(() => import("@/components/ui/card").then(mod => ({ default: mod.CardContent })));
 const Badge = React.lazy(() => import("@/components/ui/badge").then(mod => ({ default: mod.Badge })));
 
-// Cache implementation
+// Cache and utility functions (unchanged)
 export const repoCache = new Map();
 
-// Format file size for display
 const formatFileSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -45,7 +48,6 @@ const formatFileSize = (bytes) => {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 };
 
-// Build file tree from API response with repo name
 const buildFileTree = (repoName, files = []) => {
   const tree = { name: repoName || "Unnamed Repository", children: [], isFolder: true };
   files.forEach(file => {
@@ -74,7 +76,6 @@ const buildFileTree = (repoName, files = []) => {
   return tree;
 };
 
-// Group files by extension
 const groupFilesByExtension = (files = []) => {
   const groups = {};
   files.forEach(file => {
@@ -85,9 +86,9 @@ const groupFilesByExtension = (files = []) => {
   return groups;
 };
 
-// Skeleton Loaders
+// Skeleton Loaders (unchanged)
 const Skeleton = ({ className }) => (
-  <div className={`bg-muted animate-pulse rounded ${className}`} />
+  <div className={`bg-[#1a1c23] animate-pulse rounded ${className}`} />
 );
 
 const SidebarSkeleton = () => (
@@ -136,18 +137,289 @@ const MainSkeleton = () => (
 );
 
 const FooterSkeleton = () => (
-  <div className="h-8 border-t border-border bg-muted flex items-center px-4 justify-between">
+  <div className="h-8 border-t border-border bg-[#1a1c23] flex items-center px-4 justify-between">
     <Skeleton className="h-3.5 w-24 rounded-full" />
     <Skeleton className="h-3.5 w-16 rounded-full" />
   </div>
 );
+
+// Original FileExplorer (restored)
+const FileExplorer = memo(({ files, setSelectedFile, selectedFile, repoName, expandedFolders, setExpandedFolders }) => {
+  const fileTree = buildFileTree(repoName, files);
+
+  const toggleFolder = useCallback((path) => {
+    setExpandedFolders(prev => {
+      const newExpanded = new Set(prev);
+      newExpanded.has(path) ? newExpanded.delete(path) : newExpanded.add(path);
+      return newExpanded;
+    });
+  }, [setExpandedFolders]);
+
+  const getFileIcon = useCallback((filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    return <File className="h-4 w-4 text-primary flex-shrink-0" />;
+  }, []);
+
+  const renderTree = useCallback((node, path = repoName || "Unnamed Repository") => (
+    <div className={node.name !== (repoName || "Unnamed Repository") ? "ml-4" : ""}>
+      {node.isFolder ? (
+        <div>
+          <button
+            onClick={() => toggleFolder(path)}
+            className="flex items-center gap-2 py-1.5 px-2 text-sm text-muted-foreground hover:bg-[#1a1c23] rounded-md transition-colors w-full text-left group"
+          >
+            {expandedFolders.has(path) ? (
+              <ChevronRight className="h-4 w-4 flex-shrink-0 text-primary" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 flex-shrink-0 text-primary" />
+            )}
+            <Folder className="h-4 w-4 text-primary flex-shrink-0 group-hover:text-primary/80 transition-colors" />
+            <span className="truncate flex-1 group-hover:text-foreground transition-colors">{node.name}</span>
+            <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+              {node.children.length}
+            </span>
+          </button>
+          {expandedFolders.has(path) && (
+            <div className="mt-1">
+              {node.children
+                .sort((a, b) => {
+                  if (a.isFolder && !b.isFolder) return -1;
+                  if (!a.isFolder && b.isFolder) return 1;
+                  return a.name.localeCompare(b.name);
+                })
+                .map(child => renderTree(child, `${path}/${child.name}`))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className={`flex items-center justify-between gap-2 py-1.5 px-2 text-sm rounded-md transition-colors cursor-pointer group ${selectedFile === path
+            ? "bg-[#1a1c23] text-foreground"
+            : "text-muted-foreground hover:bg-[#1a1c23]/50"
+            }`}
+          onClick={() => setSelectedFile(path)}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {getFileIcon(node.name)}
+            <span className="truncate group-hover:text-foreground transition-colors">{node.name}</span>
+          </div>
+          <div className="text-xs text-muted-foreground flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+            {node.size !== undefined && formatFileSize(node.size)}
+          </div>
+        </div>
+      )}
+    </div>
+  ), [expandedFolders, selectedFile, repoName, getFileIcon, toggleFolder, setSelectedFile]);
+
+  return (
+    <div className={`bg-background border-r border-border transition-all duration-300 ease-in-out w-72`}>
+      <div className="h-full block">
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-foreground flex items-center">
+            <Folder className="h-5 w-5 text-primary mr-2" />
+            Files
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => ""}
+            className="p-1 rounded-full hover:bg-[#1a1c23] transition-colors"
+            title="Upload folder"
+          >
+            <Circle className="h-4 w-4" />
+          </Button>
+        </div>
+        <ScrollArea className="h-[calc(100vh-4rem)]">
+          <div className="p-2">
+            {files?.length ? renderTree(fileTree) : (
+              <div className="flex flex-col items-center justify-center p-6 text-center">
+                <FileSymlink className="h-10 w-10 text-muted-foreground mb-2 opacity-50" />
+                <p className="text-sm text-muted-foreground italic">No files available</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+});
+
+// Fancy 3D Visualization Component
+const FileVisualization3D = memo(({ files, repoName, onSelectFile }) => {
+  const mountRef = useRef(null);
+  const [scene] = useState(new THREE.Scene());
+  const [camera] = useState(new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000));
+  const [renderer] = useState(new THREE.WebGLRenderer({ antialias: true, alpha: true }));
+  const controlsRef = useRef(null);
+  const fontRef = useRef(null);
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    renderer.setSize(mount.clientWidth, 400); // Fixed height for section
+    renderer.setClearColor(0x1a1c23, 0); // Transparent background
+    mount.appendChild(renderer.domElement);
+
+    camera.position.set(0, 0, 50);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 1.2;
+    controlsRef.current = controls;
+
+    // Fancy Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+    pointLight.position.set(10, 10, 10);
+    scene.add(pointLight);
+    const hemisphereLight = new THREE.HemisphereLight(0xaaaaaa, 0x444444, 0.8);
+    scene.add(hemisphereLight);
+
+    // Load font for text labels
+    const loader = new FontLoader();
+    loader.load(
+      'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+      (font) => {
+        fontRef.current = font;
+
+        // Build 3D structure
+        const fileTree = buildFileTree(repoName, files);
+        const renderNode = (node, x = 0, y = 0, z = 0, parent = null) => {
+          const geometry = node.isFolder
+            ? new THREE.DodecahedronGeometry(2)
+            : new THREE.SphereGeometry(1, 32, 32);
+          const material = new THREE.MeshPhongMaterial({
+            color: node.isFolder ? 0x00ff88 : 0x4488ff,
+            shininess: 50,
+            emissive: node.isFolder ? 0x004422 : 0x112244,
+            emissiveIntensity: 0.3,
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(x, y, z);
+          mesh.userData = { name: node.name, isFolder: node.isFolder, path: parent ? `${parent.userData.path}/${node.name}` : node.name };
+          scene.add(mesh);
+
+          // Add glowing effect
+          const glowMaterial = new THREE.MeshBasicMaterial({
+            color: node.isFolder ? 0x00ff88 : 0x4488ff,
+            transparent: true,
+            opacity: 0.3,
+          });
+          const glowMesh = new THREE.Mesh(geometry, glowMaterial);
+          glowMesh.scale.set(1.2, 1.2, 1.2);
+          mesh.add(glowMesh);
+
+          // Add text label
+          const textGeometry = new TextGeometry(node.name.slice(0, 10), { // Truncate long names
+            font: font,
+            size: 0.5,
+            height: 0.1,
+          });
+          const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+          const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+          textMesh.position.set(2, 0, 0); // Offset to the right
+          mesh.add(textMesh);
+
+          if (parent) {
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(parent.position.x, parent.position.y, parent.position.z),
+              new THREE.Vector3(x, y, z),
+            ]);
+            const lineMaterial = new THREE.LineDashedMaterial({ color: 0xaaaaaa, dashSize: 0.5, gapSize: 0.5 });
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            line.computeLineDistances();
+            scene.add(line);
+          }
+
+          if (node.children) {
+            const angleStep = (2 * Math.PI) / Math.max(node.children.length, 1);
+            node.children.forEach((child, i) => {
+              const radius = 8 + node.children.length * 2;
+              const childX = x + radius * Math.cos(angleStep * i);
+              const childY = y + radius * Math.sin(angleStep * i);
+              const childZ = z - 10;
+              renderNode(child, childX, childY, childZ, mesh);
+            });
+          }
+
+          // Animation
+          const animateNode = () => {
+            mesh.rotation.y += 0.02;
+            glowMesh.scale.set(1.2 + Math.sin(Date.now() * 0.001) * 0.1, 1.2 + Math.sin(Date.now() * 0.001) * 0.1, 1.2 + Math.sin(Date.now() * 0.001) * 0.1);
+          };
+          mesh.userData.animate = animateNode;
+        };
+
+        renderNode(fileTree);
+      }
+    );
+
+    // Raycaster for interactivity
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const onMouseClick = (event) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(scene.children, true);
+      if (intersects.length > 0) {
+        let selected = intersects[0].object;
+        while (selected && !selected.userData.path){ selected = selected.parent};
+        if (selected && !selected.userData.isFolder) {
+          onSelectFile(selected.userData.path);
+        }
+      }
+    };
+
+    mount.addEventListener("click", onMouseClick);
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      scene.traverse(obj => {
+        if (obj.userData.animate) obj.userData.animate();
+      });
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    const handleResize = () => {
+      renderer.setSize(mount.clientWidth, 400);
+      camera.aspect = mount.clientWidth / 400;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      mount.removeEventListener("click", onMouseClick);
+      window.removeEventListener("resize", handleResize);
+      mount.removeChild(renderer.domElement);
+    };
+  }, [files, repoName, scene, camera, renderer, onSelectFile]);
+
+  return (
+    <Card className="w-full h-[400px] overflow-hidden border border-border bg-[#1a1c23]/95 shadow-lg">
+      <CardContent className="p-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+          <Folder className="h-5 w-5 text-primary mr-2" />
+          3D File Structure
+        </h3>
+        <div ref={mountRef} className="w-full h-[340px] rounded-md" />
+      </CardContent>
+    </Card>
+  );
+});
 
 const RepoPage = memo(() => {
   const { id: repoId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  
+
   const [state, setState] = useState({
     projectId: '',
     repo: null,
@@ -158,7 +430,6 @@ const RepoPage = memo(() => {
     showUploadDialog: false,
     selectedFile: null,
     expandedFolders: new Set(),
-    fileContent: null,
   });
 
   const validateToken = useCallback(() => {
@@ -180,14 +451,14 @@ const RepoPage = memo(() => {
         projectId: repoCache.get(repoId)?.project_id || '',
         isLoading: false,
         hasFetched: true,
-        expandedFolders: new Set([repoCache.get(repoId)?.name || "Unnamed Repository"]), // Initialize with repo name
+        expandedFolders: new Set([repoCache.get(repoId)?.name || "Unnamed Repository"]),
         showUploadDialog: repoCache.get(repoId)?.source === "local" && !repoCache.get(repoId)?.files?.length,
       }));
       return;
     }
 
     setState(prev => ({ ...prev, isLoading: true }));
-    
+
     try {
       const [repoData, filesData] = await Promise.all([
         apiMethods.getRepository(repoId),
@@ -200,14 +471,14 @@ const RepoPage = memo(() => {
       };
 
       repoCache.set(repoId, updatedRepo);
-      
+
       setState(prev => ({
         ...prev,
         repo: updatedRepo,
         projectId: updatedRepo.project_id || '',
         isLoading: false,
         hasFetched: true,
-        expandedFolders: new Set([updatedRepo.name || "Unnamed Repository"]), // Initialize with repo name
+        expandedFolders: new Set([updatedRepo.name || "Unnamed Repository"]),
         showUploadDialog: updatedRepo.source === "local" && !updatedRepo.files.length,
         errors: { ...prev.errors, fetch: null },
       }));
@@ -252,113 +523,9 @@ const RepoPage = memo(() => {
     }
   }, [fetchRepoData, state.hasFetched, repoId]);
 
-  const FileExplorer = memo(({ files }) => {
-    const fileTree = buildFileTree(state.repo?.name, files);
-
-    const toggleFolder = useCallback((path) => {
-      setState(prev => {
-        const newExpanded = new Set(prev.expandedFolders);
-        newExpanded.has(path) ? newExpanded.delete(path) : newExpanded.add(path);
-        return { ...prev, expandedFolders: newExpanded };
-      });
-    }, []);
-
-    const getFileIcon = useCallback((filename) => {
-      const ext = filename.split('.').pop().toLowerCase();
-      return <File className="h-4 w-4 text-primary flex-shrink-0" />;
-    }, []);
-
-    const renderTree = useCallback((node, path = state.repo?.name || "Unnamed Repository") => (
-      <div className={node.name !== (state.repo?.name || "Unnamed Repository") ? "ml-4" : ""}>
-        {node.isFolder ? (
-          <div>
-            <button 
-              onClick={() => toggleFolder(path)}
-              className="flex items-center gap-2 py-1.5 px-2 text-sm text-muted-foreground hover:bg-muted rounded-md transition-colors w-full text-left group"
-            >
-              {state.expandedFolders.has(path) ? (
-                <ChevronRight className="h-4 w-4 flex-shrink-0 text-primary" />
-              ) : (
-                <ChevronLeft className="h-4 w-4 flex-shrink-0 text-primary" />
-              )}
-              <Folder className="h-4 w-4 text-primary flex-shrink-0 group-hover:text-primary/80 transition-colors" />
-              <span className="truncate flex-1 group-hover:text-foreground transition-colors">{node.name}</span>
-              <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                {node.children.length}
-              </span>
-            </button>
-            {state.expandedFolders.has(path) && (
-              <div className="mt-1">
-                {node.children
-                  .sort((a, b) => {
-                    if (a.isFolder && !b.isFolder) return -1;
-                    if (!a.isFolder && b.isFolder) return 1;
-                    return a.name.localeCompare(b.name);
-                  })
-                  .map(child => renderTree(child, `${path}/${child.name}`))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div 
-            className={`flex items-center justify-between gap-2 py-1.5 px-2 text-sm rounded-md transition-colors cursor-pointer group ${
-              state.selectedFile === path
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-muted/50"
-            }`}
-            onClick={() => setState(prev => ({ ...prev, selectedFile: path }))}
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {getFileIcon(node.name)}
-              <span className="truncate group-hover:text-foreground transition-colors">{node.name}</span>
-            </div>
-            <div className="text-xs text-muted-foreground flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-              {node.size !== undefined && formatFileSize(node.size)}
-            </div>
-          </div>
-        )}
-      </div>
-    ), [state.expandedFolders, state.selectedFile, state.repo?.name, getFileIcon]);
-
-    return (
-      <div className={`bg-background border-r border-border transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-0'}`}>
-        <div className={`h-full ${isSidebarOpen ? 'block' : 'hidden'}`}>
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <Folder className="h-5 w-5 text-primary mr-2" />
-              Files
-            </h3>
-            {state.repo?.source === "local" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => ""}
-                className="p-1 rounded-full hover:bg-muted transition-colors"
-                title="Upload folder"
-              >
-                <Circle className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <ScrollArea className="h-[calc(100vh-4rem)]">
-            <div className="p-2">
-              {files?.length ? renderTree(fileTree) : (
-                <div className="flex flex-col items-center justify-center p-6 text-center">
-                  <FileSymlink className="h-10 w-10 text-muted-foreground mb-2 opacity-50" />
-                  <p className="text-sm text-muted-foreground italic">No files available</p>
-                 
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-    );
-  });
-
   const UploadDialog = memo(() => (
-    <Dialog 
-      open={state.showUploadDialog} 
+    <Dialog
+      open={state.showUploadDialog}
       onOpenChange={(open) => setState(prev => ({ ...prev, showUploadDialog: open }))}
     >
       <DialogContent className="sm:max-w-md">
@@ -394,10 +561,10 @@ const RepoPage = memo(() => {
 
   const RepoStats = memo(({ repo }) => {
     if (!repo?.files?.length) return null;
-    
+
     const fileExtensions = groupFilesByExtension(repo.files);
     const totalSize = repo.files.reduce((acc, file) => acc + (file.size || 0), 0);
-    
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <Card className="overflow-hidden border border-border">
@@ -422,7 +589,7 @@ const RepoPage = memo(() => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="overflow-hidden border border-border">
           <CardContent className="p-4">
             <h3 className="text-sm font-medium flex items-center mb-3">
@@ -468,7 +635,16 @@ const RepoPage = memo(() => {
           </>
         ) : (
           <>
-            <FileExplorer files={state.repo?.files} />
+            <div className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`}>
+              <FileExplorer
+                files={state.repo?.files}
+                setSelectedFile={(path) => setState(prev => ({ ...prev, selectedFile: path }))}
+                selectedFile={state.selectedFile}
+                repoName={state.repo?.name}
+                expandedFolders={state.expandedFolders}
+                setExpandedFolders={(folders) => setState(prev => ({ ...prev, expandedFolders: folders }))}
+              />
+            </div>
             <div className="flex-1 flex flex-col min-w-0">
               {state.errors.fetch ? (
                 <div className="flex-1 flex items-center justify-center p-4">
@@ -478,10 +654,14 @@ const RepoPage = memo(() => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => fetchRepoData(true)}
-                        className="bg-background hover:bg-muted text-foreground border-primary hover:border-primary/80 transition-colors duration-200"
+                        onClick={(e) => {
+                          e.currentTarget.querySelector(".refresh-icon")?.classList.add("animate-spin");
+                          setTimeout(() => e.currentTarget.querySelector(".refresh-icon")?.classList.remove("animate-spin"), 1000);
+                          fetchRepoData(true);
+                        }}
+                        className="bg-background hover:bg-[#1a1c23] text-foreground border-primary hover:border-primary/80 transition-colors duration-200"
                       >
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin-hover" />
+                        <RefreshCw className="h-4 w-4 mr-2 refresh-icon" />
                         Retry
                       </Button>
                     </AlertDescription>
@@ -510,7 +690,7 @@ const RepoPage = memo(() => {
                         )}
                       </h1>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {state.repo.repo_url && (
                         <Button
@@ -542,31 +722,31 @@ const RepoPage = memo(() => {
                           <Info className="h-5 w-5 mr-2 text-primary" />
                           Repository Details
                         </h2>
-                        
+
                         <RepoStats repo={state.repo} />
-                        
+
                         <Card className="overflow-hidden border border-border">
-                          <CardContent className="p-4">  
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <CardContent className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
                               <div className="space-y-3">
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Source:</span> 
+                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Source:</span>
                                   <span className="text-muted-foreground capitalize">{state.repo.source || "N/A"}</span>
                                 </div>
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">URL:</span> 
+                                  <span className="font-medium text-foreground w-20 flex-shrink-0">URL:</span>
                                   <span className="text-muted-foreground break-all flex items-center gap-2">
                                     {state.repo.repo_url ? (
                                       <>
-                                        <a 
-                                          href={state.repo.repo_url} 
-                                          target="_blank" 
+                                        <a
+                                          href={state.repo.repo_url}
+                                          target="_blank"
                                           rel="noopener noreferrer"
                                           className="hover:underline truncate"
                                         >
+                                          <ExternalLink className="h-4 w-4 flex-shrink-0 text-primary" />
                                           {state.repo.repo_url}
                                         </a>
-                                        <ExternalLink className="h-4 w-4 flex-shrink-0 text-primary" />
                                       </>
                                     ) : "N/A"}
                                   </span>
@@ -574,14 +754,14 @@ const RepoPage = memo(() => {
                               </div>
                               <div className="space-y-3">
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Created:</span> 
+                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Created:</span>
                                   <span className="text-muted-foreground flex items-center gap-2">
                                     {formatDate(state.repo.created_at) || "N/A"}
                                     <Calendar className="h-4 w-4 text-primary" />
                                   </span>
                                 </div>
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Updated:</span> 
+                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Updated:</span>
                                   <span className="text-muted-foreground flex items-center gap-2">
                                     {formatDate(state.repo.updatedAt) || "N/A"}
                                     <Calendar className="h-4 w-4 text-primary" />
@@ -593,8 +773,16 @@ const RepoPage = memo(() => {
                         </Card>
                       </section>
 
+                      <section>
+                        <FileVisualization3D
+                          files={state.repo?.files || []}
+                          repoName={state.repo?.name || "Unnamed Repository"}
+                          onSelectFile={(path) => setState(prev => ({ ...prev, selectedFile: path }))}
+                        />
+                      </section>
+
                       {state.selectedFile && (
-                        <section className="bg-muted p-4 rounded-md border border-border">
+                        <section className="bg-[#1a1c23] p-4 rounded-md border border-border">
                           <h3 className="text-sm font-semibold mb-2 flex items-center">
                             <File className="h-4 w-4 mr-2 text-primary" />
                             Selected File: {state.selectedFile}
@@ -607,7 +795,7 @@ const RepoPage = memo(() => {
                     </div>
                   </main>
 
-                  <footer className="shrink-0 h-8 border-t border-border bg-muted flex items-center px-4 justify-between text-xs text-muted-foreground shadow-inner">
+                  <footer className="shrink-0 h-8 border-t border-border bg-[#1a1c23] flex items-center px-4 justify-between text-xs text-muted-foreground shadow-inner">
                     <div className="flex items-center gap-1">
                       <FileCheck className="h-3.5 w-3.5" />
                       <span>{state.repo.files?.length || 0} files</span>
@@ -619,12 +807,13 @@ const RepoPage = memo(() => {
             </div>
           </>
         )}
+        <UploadDialog />
       </div>
     </Suspense>
   );
 });
 
-// CSS for animation and skeleton shimmer
+// CSS for animation and skeleton shimmer (unchanged)
 const style = document.createElement('style');
 style.textContent = `
   @keyframes blink {
