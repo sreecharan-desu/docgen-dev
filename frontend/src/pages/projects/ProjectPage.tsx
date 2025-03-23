@@ -6,10 +6,11 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiMethods, BASE_URL } from "@/utils/apis";
 import { deepEqual, formatDate } from "@/utils/functions";
-import { projectAtom } from "@/store/store";
+import { projectAtom, projectsAtom } from "@/store/store";
 import * as Icons from "lucide-react";
-import { useRecoilState } from "recoil";
+import { useRecoilState, useRecoilValue } from "recoil";
 
+// Lazy-loaded components
 const Button = React.lazy(() => import("@/components/ui/button").then(mod => ({ default: mod.Button })));
 const Input = React.lazy(() => import("@/components/ui/input").then(mod => ({ default: mod.Input })));
 const Label = React.lazy(() => import("@/components/ui/label").then(mod => ({ default: mod.Label })));
@@ -47,8 +48,18 @@ const cache = {
 };
 
 // Text file extensions for filtering
-const TEXT_FILE_EXTENSIONS = [
-  '.txt', '.py', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.md', '.java', '.cpp', '.c', '.rb'
+export const TEXT_FILE_EXTENSIONS = [
+  '.txt', '.py', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.md', '.java', '.cpp', '.c', '.rb',
+  '.go', '.rs', '.kt', '.kts', '.scala', '.sc', '.swift', '.m', '.mm', '.cs', '.fs', '.vb', '.r', '.pl', '.pm',
+  '.php', '.phtml', '.lua', '.dart', '.erl', '.ex', '.exs', '.hs', '.lhs', '.clj', '.cljs', '.groovy', '.gvy',
+  '.jl', '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd', '.v', '.vhdl', '.sv', '.asm', '.s', '.nasm',
+  '.f', '.f90', '.f95', '.pas', '.dpr', '.ada', '.adb', '.ads', '.cob', '.cbl', '.ml', '.mli', '.elm', '.purs',
+  '.nim', '.cr', '.rkt', '.scm', '.ss', '.lisp', '.cl', '.matlab', '.oct', '.pro', '.d', '.zig', '.vala', '.vapi',
+  '.h', '.hpp', '.hxx', '.hh', '.inl', '.xml', '.svg', '.xhtml', '.vue', '.svelte', '.astro', '.ejs', '.erb',
+  '.haml', '.pug', '.jade', '.scss', '.sass', '.less', '.styl', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf',
+  '.env', '.properties', '.csv', '.tsv', '.rst', '.adoc', '.tex', '.bib', '.org', '.make', '.mk', '.gradle',
+  '.cmake', '.ninja', '.dockerfile', '.lock', '.sql', '.graphql', '.gql', '.proto', '.thrift', '.avsc', '.log',
+  '.diff', '.patch'
 ];
 
 // Process local files for upload, filtering out hidden and non-text files
@@ -89,6 +100,7 @@ const ProjectPage = memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const [projectState, setProject] = useRecoilState(projectAtom);
+  const projects = useRecoilValue(projectsAtom);
 
   const [state, setState] = useState({
     open: false,
@@ -112,8 +124,8 @@ const ProjectPage = memo(() => {
     installationId: null as string | null,
     showRepoList: false,
     hasFetched: false,
-    filter: "all", // Added for filtering
-    sort: "last_updated", // Added for sorting
+    filter: "all",
+    sort: "last_updated",
   });
 
   const [debouncedSearchTerm] = useDebounce(state.searchTerm, 300);
@@ -204,16 +216,28 @@ const ProjectPage = memo(() => {
 
     try {
       let projectData, reposData;
-      if (!force && cache.project.has(projectId) && cache.repositories.has(projectId)) {
+
+      const projectFromAtom = projects?.find(p => p.id === projectId);
+      const projectInCache = !force && cache.project.has(projectId);
+      const reposInCache = !force && cache.repositories.has(projectId);
+
+      if (projectInCache && reposInCache) {
         projectData = cache.project.get(projectId);
         reposData = cache.repositories.get(projectId);
       } else {
-        [projectData, reposData] = await Promise.all([
-          apiMethods.getProject(projectId),
-          apiMethods.listRepositories(projectId)
-        ]);
-        cache.project.set(projectId, projectData);
-        cache.repositories.set(projectId, reposData);
+        if (projectFromAtom && !force) {
+          projectData = projectFromAtom;
+        } else {
+          projectData = await apiMethods.getProject(projectId);
+          cache.project.set(projectId, projectData);
+        }
+
+        if (reposInCache) {
+          reposData = cache.repositories.get(projectId);
+        } else {
+          reposData = await apiMethods.listRepositories(projectId);
+          cache.repositories.set(projectId, reposData);
+        }
       }
 
       const newProject = {
@@ -221,6 +245,9 @@ const ProjectPage = memo(() => {
         id: projectData.id,
         collaborators: projectData.collaborator_count
       };
+
+      setProject(newProject);
+
       setState(prev => {
         if (force || !deepEqual(prev.project, newProject) || !deepEqual(prev.repositories, reposData)) {
           return { ...prev, project: newProject, repositories: reposData, hasFetched: true };
@@ -234,7 +261,7 @@ const ProjectPage = memo(() => {
         hasFetched: true
       }));
     }
-  }, [projectId, validateToken]);
+  }, [projectId, validateToken, projects, setProject]);
 
   const handleAuthorizeGithub = useCallback(() => {
     localStorage.setItem("github_redirect_url", location.pathname + location.search);
@@ -428,7 +455,6 @@ const ProjectPage = memo(() => {
   const filteredRepos = React.useMemo(() => {
     let filtered = state.repositories || [];
 
-    // Search filtering
     if (debouncedSearchTerm) {
       const lowercaseSearch = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(repo =>
@@ -437,12 +463,10 @@ const ProjectPage = memo(() => {
       );
     }
 
-    // Filter based on source (e.g., "github", "local")
     if (state.filter !== "all") {
       filtered = filtered.filter(repo => repo.source === state.filter);
     }
 
-    // Sort based on sort option
     switch (state.sort) {
       case "last_updated":
         return [...filtered].sort((a, b) => (b.last_generated_at || 0) - (a.last_generated_at || 0));
@@ -454,8 +478,9 @@ const ProjectPage = memo(() => {
   }, [state.repositories, debouncedSearchTerm, state.filter, state.sort]);
 
   return (
-    <Suspense fallback={<ProjectsGridSkeleton />}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-2">
+      {/* Suspense for main content */}
+      <Suspense fallback={<ProjectsGridSkeleton />}>
         <header className="mb-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <div className="flex items-center gap-3 mb-6">
@@ -471,8 +496,8 @@ const ProjectPage = memo(() => {
               </Button>
 
               <div className="relative">
-                <div className="absolute -top-1 -left-2 h-10 w-1 bg-gradient-to-b from-transparent via-gray-500/20 to-transparent"></div>
-                <h1 className="text-2xl font-bold capitalize bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-500 to-white">
+                <div className="absolute mt-4 -top-1 -left-2 h-10 w-1 bg-gradient-to-b from-transparent via-gray-500/20 to-transparent"></div>
+                <h1 className="text-2xl mt-4 font-bold capitalize bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-500 to-white">
                   {state.project?.name || "Repositories"}
                 </h1>
                 <p className="text-gray-400 mt-1 text-sm flex items-center">
@@ -490,7 +515,6 @@ const ProjectPage = memo(() => {
             </Button>
           </div>
 
-          {/* Updated Search and Filters Row */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Icons.Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -662,7 +686,10 @@ const ProjectPage = memo(() => {
         ) : (
           <EmptyRepoState setOpen={() => setState(prev => ({ ...prev, open: true }))} />
         )}
+      </Suspense>
 
+      {/* Suspense for dialogs with minimal fallback */}
+      <Suspense fallback={null}>
         <Dialog
           open={state.open}
           onOpenChange={open => setState(prev => ({ ...prev, open, repoUrl: "", localFiles: null, localFolderName: "", uploadProgress: 0 }))}
@@ -953,8 +980,8 @@ const ProjectPage = memo(() => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </Suspense>
+      </Suspense>
+    </div>
   );
 });
 

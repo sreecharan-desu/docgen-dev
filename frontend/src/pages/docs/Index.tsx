@@ -71,10 +71,7 @@ const DocsPage = () => {
         )}
       >
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-8">
-            <FileCode className="h-6 w-6 text-emerald-500" />
-            <span className="font-semibold text-white">DocGen</span>
-          </div>
+     
           <nav className="space-y-1">
             {navItems.map((item) => (
               <div key={item.href}>

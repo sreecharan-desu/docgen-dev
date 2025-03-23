@@ -42,7 +42,7 @@ export const apiMethods = {
       method: "POST",
       body: JSON.stringify(data)
     }),
-    listRepofiles : (repo_id)=>apiCall(`${BASE_URL}/list-files/${repo_id}`,{
+    listRepofiles : (repo_id)=>apiCall(`${BASE_URL}/storage/list-files/${repo_id}`,{
       method : 'GET'
     }) 
   };

@@ -5,6 +5,7 @@ import { User as UserIcon, Mail, Settings, Save, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDate } from "@/utils/functions";
 
 interface User {
   email_confirmed: boolean;
@@ -75,14 +76,6 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return format(date, "MMMM dd, yyyy");
-    } catch (error) {
-      return "N/A";
-    }
-  };
 
   if (!user) {
     return (
@@ -136,7 +129,7 @@ const SettingsSection = ({ user: propUser }: SettingsSectionProps) => {
             <div className="space-y-3 flex-1">
               <div>
                 <p className="text-xs text-muted-foreground">Member Since</p>
-                <p className="text-sm">{formatDate(user.created_at)}</p>
+                <p className="text-sm capitalize font-bold">{(user.name)}</p>
               </div>
 
               <div>

@@ -15,54 +15,64 @@ const queryClient = new QueryClient();
 
 const TokenWatcher = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // Added to check current route
+  const location = useLocation();
   const { setUser } = useAuth();
   const [hasShownToast, setHasShownToast] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // Added to handle initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const authRoutes = ["/", "/auth/login", "/auth/register"]; // Define auth-related routes
+  const authRoutes = ["/", "/auth/login", "/auth/register"];
+
+  const isTokenExpired = (token: string | null): boolean => {
+    if (!token) return true;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expirationTime = payload.exp * 1000;
+      return Date.now() >= expirationTime;
+    } catch (error) {
+      return true;
+    }
+  };
 
   const checkToken = useCallback(() => {
     const token = localStorage.getItem("token");
     const isAuthRoute = authRoutes.includes(location.pathname);
 
-    // Skip check if on auth routes and it's initial load or no token yet
     if (isAuthRoute && (isInitialLoad || !token)) {
       return;
     }
 
-    if (!token) {
+    if (!token || isTokenExpired(token)) {
       if (!hasShownToast) {
         toast({
           title: "Session Expired",
-          description: "Token expired, please sign in again",
+          description: "Your session has expired, please sign in again",
           variant: "destructive",
         });
-        setUser(null);
-        navigate("/");
         setHasShownToast(true);
       }
+      localStorage.removeItem("token");
       setUser(null);
       navigate("/");
     } else if (isInitialLoad) {
-      // If token exists on initial load, mark as loaded but don't redirect
       setIsInitialLoad(false);
     }
   }, [navigate, location.pathname, setUser, hasShownToast, isInitialLoad]);
 
   useEffect(() => {
-    // Initial check with delay to allow login requests to complete
     const initialTimer = setTimeout(() => {
       checkToken();
       setIsInitialLoad(false);
-    }, 1000); // 1 second delay for initial check
+    }, 1000);
 
-    // Start regular checking after initial load
-    const interval = setInterval(checkToken, 1000);
+    const interval = setInterval(() => {
+      checkToken();
+    }, 5000);
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "token" && !e.newValue) {
-        checkToken();
+      if (e.key === "token") {
+        if (!e.newValue || isTokenExpired(e.newValue)) {
+          checkToken();
+        }
       }
     };
     window.addEventListener("storage", handleStorageChange);
@@ -77,23 +87,25 @@ const TokenWatcher = () => {
   return null;
 };
 
-const App = () => (
-  <RecoilRoot>
-    <BrowserRouter>
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <SpeedInsights />
-            <TokenWatcher />
-            <AppRoutes />
-            <Analytics />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </RecoilRoot>
-);
+const App = () => {
+  return (
+    <RecoilRoot>
+      <BrowserRouter>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <SpeedInsights />
+              <TokenWatcher />
+              <AppRoutes />
+              <Analytics />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </RecoilRoot>
+  );
+};
 
 export default App;

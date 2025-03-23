@@ -14,50 +14,42 @@ const BillingSection = () => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string>("pro");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   const plansRef = useRef(null);
   const isInView = useInView(plansRef, { once: true, amount: 0.2 });
 
   // Plans data with psychological triggers embedded
   const plans = [
     {
-      id: "Free",
+      id: "free",
       name: "Free",
       description: "Perfect for solo creators",
       price: "$0",
       period: "monthly",
       savings: "",
-      accent: "from-blue-400 to-blue-600",
+      accent: "from-blue-500/20 to-blue-700/20",
+      borderAccent: "border-blue-700/30",
       icon: Clock,
       features: [
         "5 API keys",
         "10,000 requests/month",
-        "Free support",
+        "Community support",
         "7-day log retention",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
       ],
       buttonText: "Get Started",
       buttonStyle:
-        "bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/60",
+        "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-700/50",
     },
     {
       id: "pro",
       name: "Pro",
       description: "Best value for teams",
-      price: "$29",
+      price: billingCycle === "monthly" ? "$29" : "$279",
       period: "monthly",
-      savings: "Save 20% with annual billing",
+      savings: billingCycle === "annual" ? "You save $69" : "",
       popular: true,
-      accent: "from-emerald-400 to-emerald-600",
+      accent: "from-emerald-500/20 to-teal-700/20",
+      borderAccent: "border-emerald-700/40",
       icon: Zap,
       features: [
         "Unlimited API keys",
@@ -68,7 +60,7 @@ const BillingSection = () => {
         "Custom rate limits",
       ],
       buttonText: "Upgrade Now",
-      buttonStyle: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white",
+      buttonStyle: "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0",
     },
     {
       id: "enterprise",
@@ -77,7 +69,8 @@ const BillingSection = () => {
       price: "Custom",
       period: "quote",
       savings: "",
-      accent: "from-violet-400 to-purple-600",
+      accent: "from-violet-500/20 to-purple-700/20",
+      borderAccent: "border-violet-700/30",
       icon: Shield,
       features: [
         "Unlimited everything",
@@ -90,7 +83,7 @@ const BillingSection = () => {
       ],
       buttonText: "Contact Sales",
       buttonStyle:
-        "bg-violet-50 text-violet-600 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-800/60",
+        "bg-violet-600/20 text-violet-300 hover:bg-violet-600/30 border border-violet-700/50",
     },
   ];
 
@@ -109,17 +102,21 @@ const BillingSection = () => {
     {
       question: "Do you offer a free trial?",
       answer:
-        "Yes! All plans include a 14-day full-feature trial with no credit card required. Start building immediately and decide later which plan suits your needs.",
+        "Yes! All paid plans include a 14-day full-feature trial with no credit card required. Start building immediately and decide later which plan suits your needs.",
     },
     {
       question: "Is there a setup fee?",
       answer:
-        "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and Free support.",
+        "No hidden fees whatsoever. The price you see is all-inclusive, covering all features, updates, and basic support.",
     },
   ];
 
   const toggleFaq = (index: number) => {
     setExpandedFaq(expandedFaq === index ? null : index);
+  };
+
+  const toggleBillingCycle = () => {
+    setBillingCycle(billingCycle === "monthly" ? "annual" : "monthly");
   };
 
   // Animation variants
@@ -135,7 +132,7 @@ const BillingSection = () => {
   };
 
   const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
+    hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
@@ -157,18 +154,18 @@ const BillingSection = () => {
     },
   };
 
-  const staggerFeatures = {
+  const featureVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
+        staggerChildren: 0.06,
       },
     },
   };
 
   const featureItem = {
-    hidden: { opacity: 0, x: -20 },
+    hidden: { opacity: 0, x: -10 },
     visible: {
       opacity: 1,
       x: 0,
@@ -184,269 +181,256 @@ const BillingSection = () => {
   };
 
   return (
-    <motion.div
-      className="max-w-5xl mx-auto px-4 py-16"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      {/* Header with enhanced visual elements */}
+    <div className="bg-[#0d1117] text-gray-100">
       <motion.div
-        variants={itemVariants}
-        className="mb-16 text-center max-w-3xl mx-auto relative z-10"
+        className="max-w-5xl mx-auto px-4 py-16"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
       >
-        {/* Animated background shapes */}
+        {/* Header with enhanced visual elements */}
         <motion.div
-          className="absolute -z-10 inset-0 overflow-hidden opacity-20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.2 }}
-          transition={{ duration: 2 }}
+          variants={itemVariants}
+          className="mb-20 text-center max-w-3xl mx-auto relative z-10"
         >
-          <div className="absolute top-1/4 -left-10 w-64 h-64 rounded-full bg-gradient-to-r from-emerald-600 to-cyan-600 blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-gradient-to-l from-violet-600 to-blue-600 blur-3xl"></div>
-        </motion.div>
-
-        {/* Floating particles */}
-        <div className="absolute inset-0 -z-10">
-          {[...Array(8)].map((_, i) => (
-            <motion.div
-              key={i}
-              className={`absolute w-1 h-1 rounded-full bg-emerald-400`}
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                y: [0, -10, 0],
-                opacity: [0.4, 0.8, 0.4],
-              }}
-              transition={{
-                duration: 3 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Trust badge with enhanced style and animation */}
-        <motion.div
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-900/30 to-teal-900/30 px-4 py-1.5 mb-6 ring-1 ring-emerald-500/20 shadow-lg shadow-emerald-900/10 backdrop-blur-sm"
-        >
+          {/* Subtle background glow */}
           <motion.div
-            animate={{ rotate: [0, 15, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -z-10 inset-0 overflow-hidden opacity-30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            transition={{ duration: 2 }}
           >
-            <Sparkles className="h-4 w-4 text-emerald-400" />
+            <div className="absolute top-1/4 -left-10 w-64 h-64 rounded-full bg-gradient-to-r from-emerald-900 to-teal-900 blur-3xl"></div>
+            <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-gradient-to-l from-violet-900 to-blue-900 blur-3xl"></div>
           </motion.div>
-          <span className="text-xs font-medium text-emerald-300">
-            Trusted by over 2,500+ busineFreesses worldwide
-          </span>
-        </motion.div>
 
-        {/* Main title with animated gradient */}
-        <motion.h1
-          className="text-4xl sm:text-5xl font-bold mb-6 relative w-full"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.7 }}
-        >
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-emerald-200 animate-text">
-            Simple, Transparent Pricing
-          </span>
+          {/* Trust badge with enhanced style and animation */}
           <motion.div
-            className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: "4rem" }}
-            transition={{ delay: 1, duration: 0.8 }}
-          />
-        </motion.h1>
-
-        {/* Subheading with improved styling */}
-        <motion.p
-          className="text-slate-300 max-w-lg mx-auto text-lg mb-8"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.7 }}
-        >
-          Choose the perfect plan for your needs and scale seamlessly as you
-          grow your business with our enterprise-grade API platform
-        </motion.p>
-
-        {/* Billing toggle with enhanced styling */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          className="inline-flex items-center justify-center p-1 bg-slate-700/50 rounded-full backdrop-blur-sm border border-slate-600/50 shadow-inner"
-        >
-          <button className="px-5 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg">
-            Monthly
-          </button>
-          <button className="px-5 py-2 rounded-full text-sm font-medium text-slate-300 hover:text-white transition-colors">
-            Annual
-          </button>
-          <div className="absolute right-0 transform translate-x-full ml-3 flex items-center">
-            <span className="bg-emerald-900/30 text-emerald-300 text-xs px-2 py-0.5 rounded-full font-medium">
-              Save 20%
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-950/30 px-4 py-1.5 mb-6 ring-1 ring-emerald-700/30 shadow-lg shadow-emerald-900/10 backdrop-blur-sm"
+          >
+            <motion.div
+              animate={{ rotate: [0, 15, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="h-4 w-4 text-emerald-400" />
+            </motion.div>
+            <span className="text-xs font-medium text-emerald-300">
+              Trusted by over 2,500+ businesses worldwide
             </span>
-          </div>
+          </motion.div>
+
+          {/* Main title with animated gradient */}
+          <motion.h1
+            className="text-4xl sm:text-5xl font-bold mb-6 relative w-full"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.7 }}
+          >
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-gray-300 to-teal-200">
+              Simple, Transparent Pricing
+            </span>
+            <motion.div
+              className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: "4rem" }}
+              transition={{ delay: 1, duration: 0.8 }}
+            />
+          </motion.h1>
+
+          {/* Subheading with improved styling */}
+          <motion.p
+            className="text-gray-400 max-w-lg mx-auto text-lg mb-8"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.7 }}
+          >
+            Choose the perfect plan for your needs and scale seamlessly as you
+            grow your business with our enterprise-grade API platform
+          </motion.p>
+
+          {/* Billing toggle with enhanced styling */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="inline-flex items-center justify-center p-1 bg-gray-800/50 rounded-full backdrop-blur-sm border border-gray-700/50 shadow-inner relative"
+          >
+            <button 
+              onClick={() => setBillingCycle("monthly")}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                billingCycle === "monthly" 
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg" 
+                  : "text-gray-300 hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button 
+              onClick={() => setBillingCycle("annual")}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                billingCycle === "annual" 
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg" 
+                  : "text-gray-300 hover:text-white"
+              }`}
+            >
+              Annual
+            </button>
+            {billingCycle === "annual" && (
+              <div className="absolute right-0 transform translate-x-full ml-3 flex items-center">
+                <span className="bg-emerald-900/30 text-emerald-300 text-xs px-2 py-0.5 rounded-full font-medium">
+                  Save 20%
+                </span>
+              </div>
+            )}
+          </motion.div>
         </motion.div>
 
-        {/* Testimonial snippet */}
+        {/* Pricing Plans */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1, duration: 1 }}
-          className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-sm text-slate-400"
+          ref={plansRef}
+          className="grid md:grid-cols-3 gap-6 relative z-10"
+          variants={containerVariants}
         >
-          <svg
-            className="h-4 w-4 text-amber-400"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+          {plans.map((plan) => {
+            const isPopular = plan.popular;
+            const isSelected = plan.id === selectedPlan;
+            return (
+              <motion.div
+                key={plan.id}
+                variants={planVariants}
+                initial="initial"
+                animate={isInView ? getPlanVariant(plan.id) : "initial"}
+                whileHover="hover"
+                onHoverStart={() => setHoveredPlan(plan.id)}
+                onHoverEnd={() => setHoveredPlan(null)}
+                onClick={() => setSelectedPlan(plan.id)}
+                className={`relative rounded-2xl border ${plan.borderAccent} bg-gradient-to-b from-gray-900 to-[#0d1117] shadow-xl transition-all cursor-pointer ${
+                  isSelected ? "ring-2 ring-offset-2 ring-offset-[#0d1117] ring-teal-500" : ""
+                }`}
+              >
+                {isPopular && (
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 px-3 py-1 bg-emerald-600 text-white text-xs font-bold uppercase rounded-full shadow-md">
+                    Most Popular
+                  </div>
+                )}
+
+                <div className="p-6">
+                  <div className={`bg-gradient-to-r ${plan.accent} rounded-xl p-4 mb-4`}>
+                    <div className="flex items-center gap-4">
+                      <plan.icon className="h-6 w-6 text-white" />
+                      <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                    </div>
+                    <p className="text-gray-300 mt-2 text-sm">{plan.description}</p>
+                  </div>
+
+                  <div className="flex items-baseline mt-4">
+                    <div className="text-white text-4xl font-bold">{plan.price}</div>
+                    <div className="text-gray-400 text-sm ml-2">
+                      {plan.period === "monthly"
+                        ? `/${billingCycle === "monthly" ? "mo" : "yr"}`
+                        : ""}
+                    </div>
+                  </div>
+                  
+                  {plan.savings && (
+                    <div className="text-emerald-400 text-xs mt-1">
+                      {plan.savings}
+                    </div>
+                  )}
+
+                  <motion.ul 
+                    className="mt-6 space-y-3"
+                    variants={featureVariants}
+                    initial="hidden"
+                    animate={isInView ? "visible" : "hidden"}
+                  >
+                    {plan.features.map((feature, i) => (
+                      <motion.li
+                        key={i}
+                        variants={featureItem}
+                        className="flex items-start gap-3 text-gray-300"
+                      >
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </motion.li>
+                    ))}
+                  </motion.ul>
+
+                  <Button
+                    className={`mt-8 w-full py-3 rounded-lg text-sm font-medium ${plan.buttonStyle}`}
+                  >
+                    {plan.buttonText}
+                  </Button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        {/* FAQ Section */}
+        <motion.div
+          className="mt-20 max-w-3xl mx-auto"
+          variants={containerVariants}
+        >
+          <motion.h2 
+            variants={itemVariants}
+            className="text-3xl font-bold text-white text-center mb-8"
           >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-          <svg
-            className="h-4 w-4 text-amber-400"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+            Frequently Asked Questions
+          </motion.h2>
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <motion.div
+                key={index}
+                variants={itemVariants}
+                className="border border-gray-800 rounded-lg bg-gray-900/40 overflow-hidden"
+              >
+                <button
+                  className="flex justify-between items-center w-full text-white text-left p-4 hover:bg-gray-800/40 transition-colors"
+                  onClick={() => toggleFaq(index)}
+                >
+                  <span className="text-lg font-medium">{faq.question}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-400 transition-transform ${
+                      expandedFaq === index ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                <AnimatePresence>
+                  {expandedFaq === index && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 pt-0 text-gray-300 border-t border-gray-800">
+                        {faq.answer}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+          
+          {/* CTA Section */}
+          <motion.div 
+            variants={itemVariants}
+            className="mt-12 text-center bg-gradient-to-r from-gray-800/50 to-gray-900/50 p-8 rounded-2xl border border-gray-800"
           >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-          <svg
-            className="h-4 w-4 text-amber-400"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.248 3.84a1 1 0 00.95.69h4.038c.969 0 1.372 1.24.588 1.81l-3.262 2.37a1 1 0 00-.364 1.118l1.248 3.84c.3.92-.755 1.687-1.54 1.118l-3.262-2.37a1 1 0 00-1.176 0l-3.262 2.37c-.785.57-1.84-.198-1.54-1.118l1.248-3.84a1 1 0 00-.364-1.118L2.225 9.267c-.785-.57-.38-1.81.588-1.81h4.038a1 1 0 00.95-.69l1.248-3.84z" />
-          </svg>
+            <h3 className="text-2xl font-bold text-white mb-4">Ready to get started?</h3>
+            <p className="text-gray-300 mb-6">Join thousands of businesses already using our platform</p>
+            <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-8 py-2 rounded-lg font-medium">
+              Sign up for free
+            </Button>
+          </motion.div>
         </motion.div>
       </motion.div>
-
-      <br />
-
-      {/* Pricing Plans */}
-      <motion.div
-        ref={plansRef}
-        className="grid md:grid-cols-3 gap-6"
-        variants={containerVariants}
-      >
-        {plans.map((plan, index) => {
-          const isPopular = plan.popular;
-          return (
-            <motion.div
-              key={plan.id}
-              variants={itemVariants}
-              initial="initial"
-              animate={isInView ? getPlanVariant(plan.id) : "initial"}
-              whileHover="hover"
-              onHoverStart={() => setHoveredPlan(plan.id)}
-              onHoverEnd={() => setHoveredPlan(null)}
-              onClick={() => setSelectedPlan(plan.id)}
-              className={`relative p-6 rounded-2xl border border-slate-700 bg-gradient-to-b ${plan.accent} shadow-lg transition-all cursor-pointer`}
-            >
-              {isPopular && (
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 px-3 py-1 bg-emerald-600 text-white text-xs font-bold uppercase rounded-full shadow-md">
-                  Most Popular
-                </div>
-              )}
-
-              <div className="flex items-center gap-4 mb-4">
-                <plan.icon className="h-8 w-8 text-white" />
-                <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
-              </div>
-
-              <p className="text-slate-200 mb-4">{plan.description}</p>
-
-              <div className="text-white text-4xl font-bold">{plan.price}</div>
-              <div className="text-slate-400 text-sm">
-                {plan.period === "monthly"
-                  ? "/month"
-                  : "Custom pricing available"}
-              </div>
-              {plan.savings && (
-                <div className="text-emerald-300 text-xs mt-1">
-                  {plan.savings}
-                </div>
-              )}
-
-              <ul className="mt-6 space-y-2">
-                {plan.features.map((feature, i) => (
-                  <motion.li
-                    key={i}
-                    variants={featureItem}
-                    className="flex items-center gap-2 text-white"
-                  >
-                    {feature != "" ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    ) : (
-                      <></>
-                    )}
-                    {feature}
-                  </motion.li>
-                ))}
-              </ul>
-
-              <Button
-                className={`mt-6 w-full py-3 rounded-lg ${plan.buttonStyle}`}
-              >
-                {plan.buttonText}
-              </Button>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-
-      {/* FAQ Section */}
-      <motion.div
-        className="mt-16 max-w-3xl mx-auto"
-        variants={containerVariants}
-      >
-        <h2 className="text-3xl font-bold text-white text-center mb-6">
-          Frequently Asked Questions
-        </h2>
-        <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <motion.div
-              key={index}
-              variants={itemVariants}
-              className="border border-slate-700 p-4 rounded-lg bg-slate-800/40"
-            >
-              <button
-                className="flex justify-between items-center w-full text-white text-lg font-medium"
-                onClick={() => toggleFaq(index)}
-              >
-                {faq.question}
-                <ChevronDown
-                  className={`w-5 h-5 transition-transform ${
-                    expandedFaq === index ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              <AnimatePresence>
-                {expandedFaq === index && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="text-slate-300 mt-2"
-                  >
-                    {faq.answer}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-    </motion.div>
+    </div>
   );
 };
 

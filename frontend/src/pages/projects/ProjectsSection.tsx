@@ -89,7 +89,6 @@ const useProjectsApi = () => {
 
   const fetchProjects = useCallback(async (force = true) => {
     if (!validateToken()) return;
-
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const newData = await apiMethods.listProjects();
@@ -274,8 +273,6 @@ const ProjectCard = memo(({ project, onSelect, onRename, onDelete }: any) => {
   );
 });
 
-
-
 // Project Skeleton - updated to match the new UI dimensions
 const ProjectCardSkeleton = memo(() => (
   <div className="bg-[#191d23] shadow-md rounded-lg overflow-hidden h-[200px]">
@@ -384,10 +381,8 @@ const ProjectsSection = memo(() => {
 
   // Fetch projects on component mount or path change
   useEffect(() => {
-    if (!hasFetched || location.pathname === "/projects") {
-      fetchProjects();
-    }
-  }, [fetchProjects, hasFetched, location.pathname]);
+    fetchProjects();
+  }, []);
 
   // Action handlers
   const handleCreateProject = useCallback(async () => {
@@ -442,8 +437,9 @@ const ProjectsSection = memo(() => {
   }, []);
 
   return (
-    <Suspense fallback={<ProjectsGridSkeleton />}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-2">
+      {/* Suspense for main content */}
+      <Suspense fallback={<ProjectsGridSkeleton />}>
         {/* Header */}
         <header className="mb-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -564,7 +560,10 @@ const ProjectsSection = memo(() => {
             ))}
           </div>
         )}
+      </Suspense>
 
+      {/* Suspense for dialogs with minimal fallback */}
+      <Suspense fallback={null}>
         {/* Create Project Dialog */}
         <UI.Dialog open={state.createDialogOpen} onOpenChange={open => setState(prev => ({ ...prev, createDialogOpen: open }))}>
           <UI.DialogContent className="bg-[#191d23] border border-gray-700 text-gray-200 sm:max-w-md">
@@ -715,8 +714,8 @@ const ProjectsSection = memo(() => {
             </UI.DialogFooter>
           </UI.DialogContent>
         </UI.Dialog>
-      </div>
-    </Suspense>
+      </Suspense>
+    </div>
   );
 });
 

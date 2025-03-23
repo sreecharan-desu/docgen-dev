@@ -62,8 +62,8 @@ export const Navbar = () => {
       <motion.nav
         className={`fixed top-0 w-full z-50 border-b border-opacity-40 transition-all duration-300 ${
           scrolled
-            ? "bg-background/80 backdrop-blur-lg shadow-lg border-gray-800/30"
-            : "bg-background/40 backdrop-blur-md"
+            ?  `${(window.location.pathname == '/docs') ? "bg-[#0a0a0a]" : "bg-background/80"} backdrop-blur-lg shadow-lg border-gray-800/30`
+            : `${(window.location.pathname == '/docs') ? "bg-[#0a0a0a]" : ""} bg-background/40 backdrop-blur-md`
         }`}
         variants={navbarVariants}
         initial="hidden"

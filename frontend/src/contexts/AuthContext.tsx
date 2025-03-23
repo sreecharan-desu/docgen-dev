@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem("token");
         toast({
           title : "Auth failed",
-          description : "Token expired please signin"
+          description : "Session expired ,please signin again to continue."
         })
         navigate("/")
       }
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem("token");
       toast({
         title : "Auth failed",
-        description : "Token validation failed,please signin again to continue."
+        description : "Session expired ,please signin again to continue."
       })
       navigate("/")
     } finally {
