@@ -6,8 +6,7 @@ export const getAuthHeaders = () => ({
 });
 
 export const apiCall = async (url, options, retries = 3) => {
-    const token  = localStorage.getItem("token");
-    if(token == null){
+    if(localStorage.getItem("token") == null || localStorage.getItem("token") == undefined || localStorage.getItem("token") == ""){
       location.href="";
     }
     for (let i = 0; i < retries; i++) {

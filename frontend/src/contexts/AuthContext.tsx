@@ -22,7 +22,7 @@ interface AuthResponse {
 interface AuthContextType {
   id: any;
   user: User | null;
-  setUser: (user: User | null) => void; // Fixed the type definition
+  setUser: (user: User | null) => void; 
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
@@ -295,7 +295,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
-
+  
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

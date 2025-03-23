@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Calendar,
   FileSymlink,
+  Circle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -331,11 +332,11 @@ const RepoPage = memo(() => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setState(prev => ({ ...prev, showUploadDialog: true }))}
+                onClick={() => ""}
                 className="p-1 rounded-full hover:bg-muted transition-colors"
                 title="Upload folder"
               >
-                <Upload className="h-4 w-4" />
+                <Circle className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -345,17 +346,7 @@ const RepoPage = memo(() => {
                 <div className="flex flex-col items-center justify-center p-6 text-center">
                   <FileSymlink className="h-10 w-10 text-muted-foreground mb-2 opacity-50" />
                   <p className="text-sm text-muted-foreground italic">No files available</p>
-                  {state.repo?.source === "local" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setState(prev => ({ ...prev, showUploadDialog: true }))}
-                      className="mt-4"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Files
-                    </Button>
-                  )}
+                 
                 </div>
               )}
             </div>
@@ -626,7 +617,6 @@ const RepoPage = memo(() => {
                 </>
               ) : null}
             </div>
-            <UploadDialog />
           </>
         )}
       </div>
