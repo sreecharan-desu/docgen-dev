@@ -5,7 +5,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import BillingSection from "@/components/dashboard/BillingSection";
 import SettingsSection from "@/components/dashboard/SettingsSection";
-import ProjectsSection from "@/pages/projectsSection/ProjectsSection";
+import ProjectsSection from "@/pages/projects/ProjectsSection";
 import { useNavigate } from "react-router-dom";
 
 // Skeleton loader component

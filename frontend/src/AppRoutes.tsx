@@ -2,7 +2,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "@/components/utilities/ProtectedRoute";
 import { Suspense, lazy } from "react";
 import { useAuth } from "./contexts/AuthContext";
-import ProjectsSection from "./pages/projectsSection/ProjectsSection";
+import ProjectsSection from "./pages/projects/ProjectsSection";
 import BillingSection from "./components/dashboard/BillingSection";
 import SettingsSection from "./components/dashboard/SettingsSection";
 import GithubSetupComplete from "./pages/auth/GithubSetupComplete";
@@ -20,9 +20,9 @@ const EmailVerification = lazy(() => import("./pages/auth/EmailVerification"));
 const GoogleCallback = lazy(() => import("./pages/auth/GoogleCallback"));
 const GitHubCallback = lazy(() => import("./pages/auth/GitHubCallback"));
 const NotFound = lazy(() => import("./components/utilities/NotFound"));
-const ProjectPage = lazy(() => import("./pages/projectDashboard/ProjectPage"));
+const ProjectPage = lazy(() => import("./pages/projects/ProjectPage"));
 const Sidebar = lazy(() => import("./components/dashboard/Sidebar"));
-const RepoPage = lazy(() => import("./pages/repoPage/RepoPage"));
+const RepoPage = lazy(() => import("./pages/repos/RepoPage"));
 
 
 export const AppRoutes = () => {

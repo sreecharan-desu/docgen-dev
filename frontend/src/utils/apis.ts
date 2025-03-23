@@ -6,6 +6,10 @@ export const getAuthHeaders = () => ({
 });
 
 export const apiCall = async (url, options, retries = 3) => {
+    const token  = localStorage.getItem("token");
+    if(token == null){
+      location.href="";
+    }
     for (let i = 0; i < retries; i++) {
       try {
         const response = await fetch(url, { ...options, headers: getAuthHeaders() });
