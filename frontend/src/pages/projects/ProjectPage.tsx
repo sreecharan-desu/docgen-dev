@@ -44,15 +44,41 @@ const SelectValue = React.lazy(() => import("@/components/ui/select").then(mod =
 const SelectContent = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectContent })));
 const SelectItem = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectItem })));
 
-// Cache implementation with expiration
-const cache = {
-  project: new Map<string, { data: any; timestamp: number }>(),
-  repositories: new Map<string, { data: any[]; timestamp: number }>(),
-  githubRepos: null as { data: any[]; timestamp: number } | null,
-  githubAccess: null as { data: any; timestamp: number } | null,
-  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-  isExpired: (timestamp: number) => Date.now() - timestamp > cache.CACHE_DURATION,
-};
+// Types for cached data
+interface ProjectData {
+  name: string;
+  id: string;
+  collaborator_count: number;
+}
+
+interface Repository {
+  id: string;
+  name: string;
+  source: "github" | "local";
+  repo_url: string;
+  visibility?: "public" | "private";
+  created_at: number;
+  last_generated_at: number | null;
+  last_generated_by: string | null;
+  files_count?: number;
+  storage_path?: string;
+}
+
+interface GithubRepo {
+  name: string;
+  url: string;
+  full_name: string;
+  visibility: "public" | "private";
+  size?: number;
+}
+
+interface GithubAccess {
+  has_access: boolean;
+  installation_id: string | null;
+}
+
+// Unified cache for all API responses
+const projectPageCache = new Map<string, any>();
 
 // Extended text file extensions
 export const TEXT_FILE_EXTENSIONS = [
@@ -62,7 +88,7 @@ export const TEXT_FILE_EXTENSIONS = [
 ];
 
 // Process local files with additional filtering
-const processLocalFiles = async (files: FileList) => {
+const processLocalFiles = async (files: FileList): Promise<{ path: string; content: string; size: number }[]> => {
   const fileList: { path: string; content: string; size: number }[] = [];
   for (const file of Array.from(files)) {
     const fileName = file.name.toLowerCase();
@@ -88,7 +114,7 @@ const processLocalFiles = async (files: FileList) => {
   return fileList;
 };
 
-const formatDateDisplay = (timestamp: number | null) => {
+const formatDateDisplay = (timestamp: number | null): string => {
   if (!timestamp) return "Never";
   const date = new Date(timestamp);
   return isNaN(date.getTime()) ? "Never" : date.toLocaleDateString("en-US", {
@@ -111,17 +137,19 @@ const ProjectPage = memo(() => {
     renameOpen: false,
     deleteOpen: false,
     repoName: "",
+    publicRepoUrl: "", // New field for public repo URL
+    githubImportProgress: 0, // New field for GitHub import animation
     repoUrl: "",
     newRepoName: "",
     isLoading: false,
     uploadProgress: 0,
     errors: {} as Record<string, string | null>,
     project: null as { name: string; id: string; collaborators: number } | null,
-    repositories: [] as any[],
-    selectedRepo: null as any,
+    repositories: [] as Repository[],
+    selectedRepo: null as Repository | null,
     searchTerm: "",
     activeTab: "github" as "github" | "local",
-    githubRepos: [] as any[],
+    githubRepos: [] as GithubRepo[],
     localFolderName: "",
     localFiles: null as FileList | null,
     hasGithubAccess: false,
@@ -141,7 +169,7 @@ const ProjectPage = memo(() => {
 
   const [debouncedSearchTerm] = useDebounce(state.searchTerm, 300);
 
-  const validateToken = useCallback(() => {
+  const validateToken = useCallback((): boolean => {
     const token = localStorage.getItem("token");
     if (!token || !user) {
       navigate("/");
@@ -152,21 +180,24 @@ const ProjectPage = memo(() => {
 
   const checkGithubAccess = useCallback(async (force = false) => {
     if (!validateToken()) return;
-    const cached = cache.githubAccess;
-    if (!force && cached && !cache.isExpired(cached.timestamp)) {
+
+    const cacheKey = `${projectId}:githubAccess`;
+    const cached = projectPageCache.get(cacheKey) as GithubAccess | undefined;
+
+    if (!force && cached) {
       setState(prev => ({
         ...prev,
-        hasGithubAccess: cached.data.has_access,
-        installationId: cached.data.installation_id,
-        showRepoList: cached.data.has_access,
+        hasGithubAccess: cached.has_access,
+        installationId: cached.installation_id,
+        showRepoList: cached.has_access,
       }));
-      if (cached.data.has_access) fetchGithubRepos();
+      if (cached.has_access) fetchGithubRepos();
       return;
     }
 
     try {
       const response = await apiMethods.checkGithubAccess();
-      cache.githubAccess = { data: response, timestamp: Date.now() };
+      projectPageCache.set(cacheKey, response);
       setState(prev => ({
         ...prev,
         hasGithubAccess: response.has_access,
@@ -181,29 +212,32 @@ const ProjectPage = memo(() => {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { githubAccess: `Failed to check GitHub access: ${error.message}` },
+        errors: { githubAccess: `Failed to check GitHub access: ${error instanceof Error ? error.message : 'Unknown error'}` },
       }));
     }
-  }, [validateToken]);
+  }, [validateToken, projectId]);
 
   const fetchGithubRepos = useCallback(async (force = false) => {
     if (!validateToken()) return;
-    const cached = cache.githubRepos;
-    if (!force && cached && !cache.isExpired(cached.timestamp)) {
-      setState(prev => ({ ...prev, githubRepos: cached.data, isLoading: false }));
+
+    const cacheKey = `${projectId}:githubRepos`;
+    const cached = projectPageCache.get(cacheKey) as GithubRepo[] | undefined;
+
+    if (!force && cached) {
+      setState(prev => ({ ...prev, githubRepos: cached, isLoading: false }));
       return;
     }
 
     try {
       setState(prev => ({ ...prev, isLoading: true }));
       const response = await apiMethods.listGithubRepos();
-      const formattedRepos = response.repositories.map(repo => ({
+      const formattedRepos = response.repositories.map((repo: any) => ({
         name: repo.name,
         url: repo.html_url,
         full_name: repo.full_name,
         visibility: repo.visibility,
       }));
-      cache.githubRepos = { data: formattedRepos, timestamp: Date.now() };
+      projectPageCache.set(cacheKey, formattedRepos);
       setState(prev => ({
         ...prev,
         githubRepos: formattedRepos,
@@ -213,31 +247,44 @@ const ProjectPage = memo(() => {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { github: `Failed to fetch GitHub repositories: ${error.message}` },
+        errors: { github: `Failed to fetch GitHub repositories: ${error instanceof Error ? error.message : 'Unknown error'}` },
         isLoading: false,
       }));
       toast.error("Failed to fetch GitHub repositories");
     }
-  }, [validateToken]);
+  }, [validateToken, projectId]);
 
   const fetchProjectData = useCallback(async (force = false) => {
     if (!validateToken() || !projectId) return;
 
-    try {
-      let projectData, reposData;
-      const projectFromAtom = projects?.find(p => p.id === projectId);
-      const projectCached = cache.project.get(projectId);
-      const reposCached = cache.repositories.get(projectId);
+    const projectCacheKey = `${projectId}:project`;
+    const reposCacheKey = `${projectId}:repos`;
+    const cachedProject = projectPageCache.get(projectCacheKey) as ProjectData | undefined;
+    const cachedRepos = projectPageCache.get(reposCacheKey) as Repository[] | undefined;
 
-      if (!force && projectCached && reposCached && !cache.isExpired(projectCached.timestamp) && !cache.isExpired(reposCached.timestamp)) {
-        projectData = projectCached.data;
-        reposData = reposCached.data;
-      } else {
-        projectData = (projectFromAtom && !force) ? projectFromAtom : await apiMethods.getProject(projectId);
-        reposData = await apiMethods.listRepositories(projectId);
-        cache.project.set(projectId, { data: projectData, timestamp: Date.now() });
-        cache.repositories.set(projectId, { data: reposData, timestamp: Date.now() });
-      }
+    if (!force && cachedProject && cachedRepos) {
+      const newProject = {
+        name: cachedProject.name,
+        id: cachedProject.id,
+        collaborators: cachedProject.collaborator_count,
+      };
+      setProject(newProject);
+      setState(prev => ({
+        ...prev,
+        project: newProject,
+        repositories: cachedRepos,
+        hasFetched: true,
+      }));
+      return;
+    }
+
+    try {
+      const projectFromAtom = projects?.find(p => p.id === projectId);
+      const projectData = (projectFromAtom && !force) ? projectFromAtom : await apiMethods.getProject(projectId);
+      const reposData = await apiMethods.listRepositories(projectId);
+
+      projectPageCache.set(projectCacheKey, projectData);
+      projectPageCache.set(reposCacheKey, reposData);
 
       const newProject = {
         name: projectData.name,
@@ -246,17 +293,16 @@ const ProjectPage = memo(() => {
       };
 
       setProject(newProject);
-
-      setState(prev => {
-        if (force || !deepEqual(prev.project, newProject) || !deepEqual(prev.repositories, reposData)) {
-          return { ...prev, project: newProject, repositories: reposData, hasFetched: true };
-        }
-        return prev;
-      });
+      setState(prev => ({
+        ...prev,
+        project: newProject,
+        repositories: reposData,
+        hasFetched: true,
+      }));
     } catch (err) {
       setState(prev => ({
         ...prev,
-        errors: { fetch: err.message || "Error fetching data" },
+        errors: { fetch: err instanceof Error ? err.message : "Error fetching data" },
         hasFetched: true,
       }));
     }
@@ -267,31 +313,78 @@ const ProjectPage = memo(() => {
     window.location.href = `${BASE_URL}/github/authorize-app`;
   }, [location]);
 
-  const handleImportRepo = useCallback(async (repo: any) => {
+
+  const handleImportRepo = useCallback(async (repo?: GithubRepo) => {
     if (!validateToken() || !projectId) return;
+
     try {
-      setState(prev => ({ ...prev, isLoading: true }));
-      const repoData = repo.visibility === "public"
-        ? { project_id: projectId, repo_url: repo.url }
-        : { project_id: projectId, repo_full_name: repo.full_name, installation_id: state.installationId };
+      setState(prev => ({ ...prev, isLoading: true, githubImportProgress: 0 }));
 
-      const newRepo = await (repo.visibility === "public"
-        ? apiMethods.importPublicRepo(repoData)
-        : apiMethods.importPrivateRepo(repoData));
+      // Simulate import progress
+      let progress = 0;
+      const importSimulation = setInterval(() => {
+        progress += Math.random() * 20;
+        setState(prev => ({ ...prev, githubImportProgress: Math.min(progress, 95) }));
+      }, 200);
 
-      const updatedRepos = [...(cache.repositories.get(projectId)?.data || []), newRepo];
-      cache.repositories.set(projectId, { data: updatedRepos, timestamp: Date.now() });
+      let repoData;
+      let importMethod;
+
+      if (repo) {
+        // Authenticated GitHub repo
+        repoData = repo.visibility === "public"
+          ? { project_id: projectId, repo_url: repo.url }
+          : { project_id: projectId, repo_full_name: repo.full_name, installation_id: state.installationId };
+        importMethod = repo.visibility === "public" ? apiMethods.importPublicRepo : apiMethods.importPrivateRepo;
+      } else {
+        // Public repo URL input
+        if (!state.publicRepoUrl.trim()) {
+          throw new Error("Please provide a repository URL");
+        }
+
+        const visibility = await checkRepoVisibility(state.publicRepoUrl);
+        if (visibility === "invalid") {
+          throw new Error("Invalid repository URL or repository does not exist");
+        }
+
+        if (visibility === "public") {
+          repoData = { project_id: projectId, repo_url: state.publicRepoUrl };
+          importMethod = apiMethods.importPublicRepo;
+        } else {
+          // Private repo via URL requires GitHub authentication
+          if (!state.installationId) {
+            throw new Error("GitHub authentication required for private repositories");
+          }
+          const match = state.publicRepoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+          if (!match) throw new Error("Invalid GitHub URL format");
+          const [, owner, repoName] = match;
+          repoData = { project_id: projectId, repo_full_name: `${owner}/${repoName}`, installation_id: state.installationId };
+          importMethod = apiMethods.importPrivateRepo;
+        }
+      }
+
+      const newRepo = await importMethod(repoData);
+
+      clearInterval(importSimulation);
+      setState(prev => ({ ...prev, githubImportProgress: 100 }));
+
+      const reposCacheKey = `${projectId}:repos`;
+      const updatedRepos = [...(projectPageCache.get(reposCacheKey) || []), newRepo];
+      projectPageCache.set(reposCacheKey, updatedRepos);
+
       setState(prev => ({
         ...prev,
         repositories: updatedRepos,
         open: false,
         repoName: "",
         repoUrl: "",
+        publicRepoUrl: "", // Reset public repo URL
         githubRepos: [],
         localFolderName: "",
         localFiles: null,
         activeTab: "github",
         isLoading: false,
+        githubImportProgress: 0, // Reset progress
         errors: { ...prev.errors, create: null },
       }));
       toast.success("Repository imported successfully");
@@ -299,12 +392,13 @@ const ProjectPage = memo(() => {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { create: error.message || "Error importing repository" },
+        errors: { create: error instanceof Error ? error.message : "Error importing repository" },
         isLoading: false,
+        githubImportProgress: 0, // Reset on error
       }));
       toast.error("Failed to import repository");
     }
-  }, [projectId, state.installationId, navigate, validateToken]);
+  }, [projectId, state.installationId, state.publicRepoUrl, navigate, validateToken]);
 
   const handleCreateRepo = useCallback(async () => {
     if (!validateToken() || !projectId) return;
@@ -332,7 +426,7 @@ const ProjectPage = memo(() => {
     }
 
     try {
-      const newRepo = {
+      const newRepo: Repository = {
         project_id: projectId,
         name: finalRepoName,
         source: "local",
@@ -341,6 +435,7 @@ const ProjectPage = memo(() => {
         created_at: Date.now(),
         last_generated_at: null,
         last_generated_by: null,
+        id: "", // Will be set by the API response
       };
 
       const processedFiles = await processLocalFiles(state.localFiles);
@@ -360,8 +455,11 @@ const ProjectPage = memo(() => {
       clearInterval(uploadSimulation);
       setState(prev => ({ ...prev, uploadProgress: 100 }));
 
-      const updatedRepos = [...(cache.repositories.get(projectId)?.data || []), newRepo];
-      cache.repositories.set(projectId, { data: updatedRepos, timestamp: Date.now() });
+      newRepo.id = uploadResponse.repository_id;
+      const reposCacheKey = `${projectId}:repos`;
+      const updatedRepos = [...(projectPageCache.get(reposCacheKey) || []), newRepo];
+      projectPageCache.set(reposCacheKey, updatedRepos);
+
       setState(prev => ({
         ...prev,
         repositories: updatedRepos,
@@ -381,7 +479,7 @@ const ProjectPage = memo(() => {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        errors: { create: err.message || "Error creating repository" },
+        errors: { create: err instanceof Error ? err.message : "Error creating repository" },
         isLoading: false,
         uploadProgress: 0,
       }));
@@ -397,10 +495,13 @@ const ProjectPage = memo(() => {
         name: state.newRepoName,
         source: state.selectedRepo.source,
       });
-      const updatedRepos = (cache.repositories.get(projectId)?.data || []).map(r =>
+
+      const reposCacheKey = `${projectId}:repos`;
+      const updatedRepos = (projectPageCache.get(reposCacheKey) || []).map((r: Repository) =>
         r.id === state.selectedRepo.id ? updatedRepo : r
       );
-      cache.repositories.set(projectId, { data: updatedRepos, timestamp: Date.now() });
+      projectPageCache.set(reposCacheKey, updatedRepos);
+
       setState(prev => ({
         ...prev,
         repositories: updatedRepos,
@@ -414,19 +515,49 @@ const ProjectPage = memo(() => {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        errors: { rename: err.message || "Error renaming repository" },
+        errors: { rename: err instanceof Error ? err.message : "Error renaming repository" },
         isLoading: false,
       }));
     }
   }, [state.newRepoName, state.selectedRepo, projectId, validateToken]);
+
+  const checkRepoVisibility = async (repoUrl: string): Promise<"public" | "private" | "invalid"> => {
+    try {
+      // Extract owner and repo name from URL (e.g., https://github.com/username/repo)
+      const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+      if (!match) return "invalid";
+
+      const [, owner, repo] = match;
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+
+      // Make a HEAD request to check if the repo is accessible without authentication
+      const response = await fetch(apiUrl, {
+        method: "HEAD",
+      });
+
+      if (response.status === 200) {
+        return "public"; // Public repo if accessible without auth
+      } else if (response.status === 404 || response.status === 403) {
+        return "private"; // Private or non-existent repo
+      } else {
+        return "invalid"; // Other errors (e.g., malformed URL)
+      }
+    } catch (error) {
+      console.error(`Error checking repo visibility for ${repoUrl}:`, error);
+      return "invalid";
+    }
+  };
 
   const handleDeleteRepo = useCallback(async () => {
     if (!validateToken() || !state.selectedRepo) return;
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await apiMethods.deleteRepository(state.selectedRepo.id);
-      const updatedRepos = (cache.repositories.get(projectId)?.data || []).filter(r => r.id !== state.selectedRepo.id);
-      cache.repositories.set(projectId, { data: updatedRepos, timestamp: Date.now() });
+
+      const reposCacheKey = `${projectId}:repos`;
+      const updatedRepos = (projectPageCache.get(reposCacheKey) || []).filter((r: Repository) => r.id !== state.selectedRepo.id);
+      projectPageCache.set(reposCacheKey, updatedRepos);
+
       setState(prev => ({
         ...prev,
         repositories: updatedRepos,
@@ -439,7 +570,7 @@ const ProjectPage = memo(() => {
     } catch (err) {
       setState(prev => ({
         ...prev,
-        errors: { delete: err.message || "Error deleting repository" },
+        errors: { delete: err instanceof Error ? err.message : "Error deleting repository" },
         isLoading: false,
       }));
     }
@@ -465,15 +596,14 @@ const ProjectPage = memo(() => {
 
   useEffect(() => {
     if (validateToken() && !state.hasFetched) {
-      fetchProjectData(true);
-      checkGithubAccess(true);
+      fetchProjectData();
+      checkGithubAccess();
     }
   }, [state.hasFetched, fetchProjectData, checkGithubAccess, validateToken]);
 
   const filteredRepos = useMemo(() => {
     let filtered = state.repositories || [];
 
-    // Search filter
     if (debouncedSearchTerm) {
       const lowercaseSearch = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(repo =>
@@ -482,26 +612,22 @@ const ProjectPage = memo(() => {
       );
     }
 
-    // Source filter
     if (state.filters.source !== "all") {
       filtered = filtered.filter(repo => repo.source === state.filters.source);
     }
 
-    // Status filter
     if (state.filters.status !== "all") {
       filtered = filtered.filter(repo =>
         state.filters.status === "active" ? !!repo.last_generated_at : !repo.last_generated_at
       );
     }
 
-    // Visibility filter (assuming GitHub repos have visibility)
     if (state.filters.visibility !== "all") {
       filtered = filtered.filter(repo =>
         repo.source === "github" ? repo.visibility === state.filters.visibility : true
       );
     }
 
-    // Date range filter
     if (state.filters.dateRange !== "all") {
       const now = Date.now();
       const ranges = {
@@ -515,7 +641,6 @@ const ProjectPage = memo(() => {
       );
     }
 
-    // Sorting
     return [...filtered].sort((a, b) => {
       switch (state.sort) {
         case "last_updated":
@@ -601,22 +726,7 @@ const ProjectPage = memo(() => {
                 </SelectContent>
               </Select>
 
-              <Select
-                value={state.filters.status}
-                onValueChange={value => setState(prev => ({
-                  ...prev,
-                  filters: { ...prev.filters, status: value as any },
-                }))}
-              >
-                <SelectTrigger className="w-[180px] border-gray-700 bg-transparent text-gray-200">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#191d23] border-gray-700 text-gray-200">
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+
 
               <Select
                 value={state.filters.visibility}
@@ -820,14 +930,14 @@ const ProjectPage = memo(() => {
             <DialogHeader>
               <DialogTitle className="text-white">Import Repository</DialogTitle>
             </DialogHeader>
-            <div className="py-4 flex flex-col h-[450px]">
+            <div className="py-4 flex flex-col h-full">
               <div className="mb-4">
                 <p className="text-gray-400 flex items-center gap-2">
                   <Icons.GitBranch className="h-4 w-4" />
                   Connect your project to a repository
                 </p>
                 <p className="text-white text-xs ml-6">
-                  <b className="text-red-600">**</b> Hidden files, empty files, and files won’t be uploaded
+                  <b className="text-red-600">**</b> Hidden files, empty files, and files won't be uploaded
                 </p>
               </div>
 
@@ -866,39 +976,87 @@ const ProjectPage = memo(() => {
                         Authorize GitHub
                       </Button>
                     </div>
-                  ) : state.showRepoList && state.githubRepos.length > 0 ? (
-                    <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
-                      {state.githubRepos.map(repo => (
-                        <div
-                          key={repo.url}
-                          className="flex justify-between items-center p-3 rounded-md bg-[#2a2a2a] hover:bg-[#333333] transition-colors duration-200"
-                        >
-                          <div>
-                            <p className="text-gray-200 font-medium flex items-center">
-                              <Icons.GitBranch className="h-4 w-4 mr-2 text-gray-400" />
-                              {repo.name}
-                            </p>
-                            <p className="text-gray-400 text-sm flex items-center mt-1">
-                              <Icons.Eye className="h-3 w-3 mr-1" />
-                              {repo.visibility} • {(repo.size / 1024).toFixed(1)} KB
-                            </p>
-                          </div>
-                          <Button
-                            onClick={() => debouncedActions.importRepo(repo)}
-                            className="bg-[#00ff9d] text-black hover:bg-[#00ff9d]/90 rounded-full px-4 py-1 text-sm font-medium"
-                            disabled={state.isLoading}
-                          >
-                            <Icons.Download className="h-4 w-4 mr-1" />
-                            Import
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
                   ) : (
-                    <div className="text-center bg-[#2a2a2a]/50 p-6 rounded-lg border border-dashed border-gray-700 h-full flex flex-col justify-center">
-                      <Icons.FolderSearch className="h-12 w-12 mx-auto mb-3 text-gray-500" />
-                      <p className="text-gray-400">No repositories found</p>
-                    </div>
+                    <>
+                      {/*<div className="bg-[#2a2a2a]/50 p-4 rounded-lg border border-dashed border-gray-700">
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
+                          <Label className="text-right text-gray-300 font-medium sm:col-span-1 flex items-center justify-end">
+                            Public Repo URL
+                          </Label>
+                          <div className="sm:col-span-3 space-y-4">
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <Input
+                                  value={state.publicRepoUrl}
+                                  onChange={e => setState(prev => ({ ...prev, publicRepoUrl: e.target.value }))}
+                                  placeholder="https://github.com/username/repo"
+                                  className="w-full bg-[#2a2a2a] text-gray-200 border-gray-700 rounded-md pl-10 pr-4 py-2 focus:ring-2 focus:ring-[#00ff9d]/50 transition-all"
+                                />
+                                <Icons.Link className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              </div>
+                              <Button
+                                onClick={() => debouncedActions.importRepo()}
+                                disabled={state.isLoading || !state.publicRepoUrl.trim()}
+                                className="bg-[#00ff9d] text-black hover:bg-[#00ff9d]/90 rounded-full px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors"
+                              >
+                                Import
+                              </Button>
+                            </div>
+                            {state.errors.create && state.publicRepoUrl && (
+                              <p className="text-red-400 text-sm text-center">{state.errors.create}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>*/}
+
+                      {state.showRepoList && state.githubRepos.length > 0 ? (
+
+
+
+
+                        <div className="max-h-[200px] overflow-y-auto pr-1 space-y-2">
+                          {state.githubRepos.map(repo => (
+                            <div
+                              key={repo.url}
+                              className="flex justify-between items-center p-3 rounded-md bg-[#2a2a2a] hover:bg-[#333333] transition-colors duration-200"
+                            >
+                              <div>
+                                <p className="text-gray-200 font-medium flex items-center">
+                                  <Icons.GitBranch className="h-4 w-4 mr-2 text-gray-400" />
+                                  {repo.name}
+                                </p>
+                              </div>
+                              <Button
+                                onClick={() => debouncedActions.importRepo(repo)}
+                                className="bg-[#00ff9d] text-black hover:bg-[#00ff9d]/90 rounded-full px-4 py-1 text-sm font-medium"
+                                disabled={state.isLoading}
+                              >
+                                <Icons.Download className="h-4 w-4 mr-1" />
+                                Import
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center bg-[#2a2a2a]/50 p-6 rounded-lg border border-dashed border-gray-700 flex-1 flex flex-col justify-center">
+                          <Icons.FolderSearch className="h-12 w-12 mx-auto mb-3 text-gray-500" />
+                          <p className="text-gray-400">No authenticated repositories found</p>
+                        </div>
+                      )}
+
+                      {state.isLoading && state.githubImportProgress > 0 && (
+                        <div className="space-y-2">
+                          <Progress
+                            value={state.githubImportProgress}
+                            className="w-full bg-gray-700 h-2 rounded-full"
+                          />
+                          <p className="text-sm text-gray-400 text-center">
+                            Importing: {Math.round(state.githubImportProgress)}%
+                          </p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </TabsContent>
 
@@ -935,16 +1093,16 @@ const ProjectPage = memo(() => {
                               />
                               <Icons.Folder className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             </div>
+                            {state.isLoading && (
+                              <div className="mt-4">
+                                <Progress value={state.uploadProgress} className="w-full bg-gray-700" />
+                                <p className="text-sm text-gray-400 mt-2 text-center">
+                                  Uploading: {Math.round(state.uploadProgress)}%
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        {state.isLoading && (
-                          <div className="mt-4">
-                            <Progress value={state.uploadProgress} className="w-full bg-gray-700" />
-                            <p className="text-sm text-gray-400 mt-2 text-center">
-                              Uploading: {Math.round(state.uploadProgress)}%
-                            </p>
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>

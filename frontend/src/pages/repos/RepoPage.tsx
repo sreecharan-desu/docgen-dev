@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, memo, Suspense } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect, useCallback, memo, Suspense, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
@@ -17,6 +18,10 @@ import {
   ZoomIn,
   ZoomOut,
   Layers,
+  Loader2,
+  Minimize,
+  Maximize,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -42,11 +47,29 @@ const Card = React.lazy(() => import("@/components/ui/card").then(mod => ({ defa
 const CardContent = React.lazy(() => import("@/components/ui/card").then(mod => ({ default: mod.CardContent })));
 const Badge = React.lazy(() => import("@/components/ui/badge").then(mod => ({ default: mod.Badge })));
 
-// Cache implementation
-export const repoCache = new Map();
+// Types for cached data
+interface RepoData {
+  id: string;
+  name: string;
+  project_id: string;
+  source: "github" | "local";
+  repo_url?: string;
+  created_at: number;
+  updatedAt?: number;
+  files: FileData[];
+}
+
+interface FileData {
+  path: string;
+  size?: number;
+  modified?: string;
+}
+
+// Unified cache for all API responses
+const repoPageCache = new Map<string, any>();
 
 // Format file size
-const formatFileSize = (bytes) => {
+const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -54,8 +77,16 @@ const formatFileSize = (bytes) => {
 };
 
 // Build file tree
-const buildFileTree = (repoName, files = []) => {
-  const tree = { name: repoName || "Unnamed Repository", children: [], isFolder: true };
+interface FileTreeNode {
+  name: string;
+  children: FileTreeNode[];
+  isFolder: boolean;
+  size?: number;
+  modified?: string;
+}
+
+const buildFileTree = (repoName: string, files: FileData[] = []): FileTreeNode => {
+  const tree: FileTreeNode = { name: repoName || "Unnamed Repository", children: [], isFolder: true };
   files.forEach(file => {
     if (!file?.path || typeof file.path !== 'string') return;
     const parts = file.path.split('/').filter(Boolean);
@@ -83,18 +114,18 @@ const buildFileTree = (repoName, files = []) => {
 };
 
 // Group files by extension
-const groupFilesByExtension = (files = []) => {
-  const groups = {};
+const groupFilesByExtension = (files: FileData[] = []): Record<string, number> => {
+  const groups: Record<string, number> = {};
   files.forEach(file => {
     if (!file?.path) return;
-    const extension = file.path.split('.').pop().toLowerCase() || 'other';
+    const extension = file.path.split('.').pop()?.toLowerCase() || 'other';
     groups[extension] = (groups[extension] || 0) + 1;
   });
   return groups;
 };
 
 // Skeleton Loaders
-const Skeleton = ({ className }) => (
+const Skeleton = ({ className }: { className: string }) => (
   <div className={`bg-[#1a1c23] animate-pulse rounded ${className}`} />
 );
 
@@ -150,316 +181,562 @@ const FooterSkeleton = () => (
   </div>
 );
 
-// FileTree3DVisualization Component
-const FileTree3DVisualization = memo(({ fileTree }) => {
-  const mountRef = useRef(null);
-  const sceneRef = useRef(null);
+// 3D Visualization Component (unchanged except for type annotations)
+const FileTree3DVisualization = memo(({ fileTree }: { fileTree: FileTreeNode }) => {
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [nodeCount, setNodeCount] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  // Color schemes for different file types
-  const FILE_COLORS = {
-    js: 0xf7df1e,    // JavaScript - Yellow
-    jsx: 0x61dafb,   // JSX - React Blue
-    ts: 0x3178c6,    // TypeScript - Blue
-    tsx: 0x61dafb,   // TSX - React Blue
-    css: 0x264de4,   // CSS - Blue
-    scss: 0xcc6699,  // SCSS - Pink
-    html: 0xe34c26,  // HTML - Orange
-    json: 0x292929,  // JSON - Dark Gray
-    md: 0x663399,    // Markdown - Purple
-    svg: 0xff9900,   // SVG - Orange
-    png: 0x4caf50,   // PNG - Green
-    jpg: 0x2196f3,   // JPG - Blue
-    default: 0xcccccc // Default - Light Gray
-  };
+  const nodesMap = useMemo(() => new Map<string, any>(), []);
 
-  const getFileColor = (fileName) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    return FILE_COLORS[extension] || FILE_COLORS.default;
-  };
-
-  const getFileGeometry = (fileName) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    if (['png', 'jpg', 'jpeg', 'svg', 'gif'].includes(extension)) {
-      return new THREE.PlaneGeometry(0.7, 0.7);
-    }
-    if (['js', 'jsx', 'ts', 'tsx', 'css', 'scss', 'html', 'json'].includes(extension)) {
-      return new THREE.BoxGeometry(0.7, 0.7, 0.7);
-    }
-    if (['md', 'txt', 'pdf', 'doc'].includes(extension)) {
-      return new THREE.CylinderGeometry(0.35, 0.35, 0.7, 16);
-    }
-    return new THREE.SphereGeometry(0.4, 16, 16);
-  };
+  const totalNodes = useMemo(() => {
+    const countNodes = (node: FileTreeNode): number => {
+      let count = 1;
+      if (node.isFolder && node.children) {
+        node.children.forEach(child => (count += countNodes(child)));
+      }
+      return count;
+    };
+    return countNodes(fileTree);
+  }, [fileTree]);
 
   useEffect(() => {
     if (!mountRef.current || !fileTree) return;
 
-    // Scene setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f1117);
+    scene.background = new THREE.Color(0x111827);
     const width = mountRef.current.clientWidth;
     const height = mountRef.current.clientHeight;
 
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(0, 0, 15);
+    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+    camera.position.set(0, 0, 40);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     mountRef.current.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.25;
+    controls.dampingFactor = 0.1;
     controls.enableZoom = true;
+    controls.autoRotate = autoRotate;
+    controls.autoRotateSpeed = 0.5;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(10, 10, 10);
     scene.add(directionalLight);
 
-    const rootGroup = new THREE.Group();
-    scene.add(rootGroup);
+    const nodes: any[] = [];
+    const links: any[] = [];
+    setNodeCount(totalNodes);
 
-    const nodes = [];
-    const links = [];
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0x555555,
+      transparent: true,
+      opacity: 0.6
+    });
 
-    const createFolderNode = (name, depth = 0) => {
-      const geometry = new THREE.SphereGeometry(0.8, 16, 16);
-      const material = new THREE.MeshStandardMaterial({
-        color: 0x4285f4,
-        roughness: 0.7,
-        metalness: 0.2
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-
-      const sprite = createTextSprite(name, 18);
-      sprite.position.set(0, 1.2, 0);
-      mesh.add(sprite);
-
-      mesh.userData = { name, isFolder: true, depth, positionIndex: nodes.length };
-      nodes.push({ mesh, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 });
-      return mesh;
-    };
-
-    const createFileNode = (name, depth = 0) => {
-      const geometry = getFileGeometry(name);
-      const material = new THREE.MeshStandardMaterial({
-        color: getFileColor(name),
-        roughness: 0.5,
-        metalness: 0.3
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-
-      const sprite = createTextSprite(name, 14);
-      sprite.position.set(0, 0.8, 0);
-      mesh.add(sprite);
-
-      mesh.userData = { name, isFolder: false, depth, positionIndex: nodes.length };
-      nodes.push({ mesh, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 });
-      return mesh;
-    };
-
-    const createTextSprite = (text, fontSize) => {
+    const createTextSprite = (text: string, fontSize: number): THREE.Sprite => {
       const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = 256;
-      canvas.height = 128;
-      context.fillStyle = 'rgba(26, 28, 35, 0.8)';
+      const context = canvas.getContext('2d')!;
+      canvas.width = 300;
+      canvas.height = 64;
+      context.fillStyle = 'rgba(0, 0, 0, 0)';
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.font = `Bold ${fontSize}px Arial`;
+      context.font = `${fontSize}px Arial`;
       context.fillStyle = '#ffffff';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
-      context.fillText(text, canvas.width / 2, canvas.height / 2);
-
+      context.fillText(text.length > 15 ? text.substring(0, 12) + '...' : text, canvas.width / 2, canvas.height / 2);
       const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
       const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(fontSize === 18 ? 2 : 1.6, fontSize === 18 ? 1 : 0.8, 1);
+      sprite.scale.set(2, 0.5, 1);
       return sprite;
     };
 
-    const processNode = (node, parent = null, depth = 0) => {
-      const nodeMesh = node.isFolder ? createFolderNode(node.name, depth) : createFileNode(node.name, depth);
-      rootGroup.add(nodeMesh);
+    const getNodeColor = (node: FileTreeNode, depth: number): number => {
+      const colorSchemes = [
+        { folder: 0x68b0ab, file: 0x8fc0a9 },
+        { folder: 0xc8553d, file: 0xf28f3b },
+        { folder: 0x588b8b, file: 0xffd5c2 },
+        { folder: 0xf2d0a4, file: 0xf1e3d3 },
+        { folder: 0xd88c9a, file: 0xf2d0a9 }
+      ];
+      const colorIndex = depth % colorSchemes.length;
+      return node.isFolder ? colorSchemes[colorIndex].folder : colorSchemes[colorIndex].file;
+    };
+
+    const getRelatedNodes = (nodeObj: any): Set<string> => {
+      const related = new Set<string>();
+      related.add(nodeObj.mesh.uuid);
+      let current = nodeObj;
+      while (current.parent) {
+        related.add(current.parent.mesh.uuid);
+        current = current.parent;
+      }
+      const addDescendants = (node: any) => {
+        if (!node) return;
+        node.children.forEach((child: any) => {
+          related.add(child.mesh.uuid);
+          addDescendants(child);
+        });
+      };
+      addDescendants(nodeObj);
+      if (nodeObj.parent) {
+        nodeObj.parent.children.forEach((sibling: any) => {
+          related.add(sibling.mesh.uuid);
+        });
+      }
+      return related;
+    };
+
+    const processNode = (node: FileTreeNode, parent: any = null, depth: number = 0): any => {
+      const radius = node.isFolder ? 0.8 : 0.5;
+      const geometry = new THREE.SphereGeometry(radius, 16, 16);
+      const nodeColor = getNodeColor(node, depth);
+      const material = new THREE.MeshPhongMaterial({
+        color: nodeColor,
+        transparent: true,
+        opacity: 0.85,
+        shininess: 30
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.userData.originalColor = nodeColor;
+
+      const sprite = createTextSprite(node.name, node.isFolder ? 60 : 40);
+      sprite.position.set(0, radius + 0.5, 0);
+      mesh.add(sprite);
+
+      mesh.userData = { ...mesh.userData, name: node.name, isFolder: node.isFolder, depth, children: [] };
+
+      const phi = Math.acos(-1 + 2 * Math.random());
+      const theta = Math.random() * Math.PI * 2;
+      const radius2 = depth * 5 + Math.random() * 5;
+      const x = radius2 * Math.sin(phi) * Math.cos(theta);
+      const y = radius2 * Math.sin(phi) * Math.sin(theta);
+      const z = radius2 * Math.cos(phi);
+
+      const nodeObj = {
+        mesh,
+        x, y, z,
+        vx: 0, vy: 0, vz: 0,
+        depth,
+        isFolder: node.isFolder,
+        children: [],
+        parent: parent ? parent.mesh : null
+      };
+
+      nodes.push(nodeObj);
+      nodesMap.set(mesh.uuid, nodeObj);
+      scene.add(mesh);
 
       if (parent) {
-        links.push({
-          source: parent.userData.positionIndex,
-          target: nodeMesh.userData.positionIndex,
-          strength: 1 / (depth + 1)
-        });
-
-        const material = new THREE.LineBasicMaterial({ color: 0x4d4d4d, transparent: true, opacity: 0.5 });
-        const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-        const line = new THREE.Line(geometry, material);
-        line.userData = { sourceIndex: parent.userData.positionIndex, targetIndex: nodeMesh.userData.positionIndex };
-        rootGroup.add(line);
+        const link = { source: nodesMap.get(parent.mesh.uuid), target: nodeObj };
+        links.push(link);
+        const points = [
+          new THREE.Vector3(parent.mesh.position.x, parent.mesh.position.y, parent.mesh.position.z),
+          new THREE.Vector3(mesh.position.x, mesh.position.y, mesh.position.z)
+        ];
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        line.userData = { sourceId: parent.mesh.uuid, targetId: mesh.uuid };
+        scene.add(line);
+        link.line = line;
+        if (parent) {
+          nodeObj.parent = nodesMap.get(parent.mesh.uuid);
+          nodesMap.get(parent.mesh.uuid).children.push(nodeObj);
+        }
       }
 
       if (node.isFolder && node.children) {
-        node.children.forEach(child => processNode(child, nodeMesh, depth + 1));
+        node.children.forEach(child => processNode(child, nodeObj, depth + 1));
       }
+
+      return nodeObj;
     };
 
-    processNode(fileTree);
+    const rootNode = processNode(fileTree);
 
-    const simulateForces = () => {
-      // Repulsive forces
+    const applyForces = (): number => {
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[j].x - nodes[i].x;
-          const dy = nodes[j].y - nodes[i].y;
-          const dz = nodes[j].z - nodes[i].z;
-          const distance = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), 0.1);
-          const force = 5 / (distance * distance);
-
-          nodes[i].vx -= (dx / distance) * force;
-          nodes[i].vy -= (dy / distance) * force;
-          nodes[i].vz -= (dz / distance) * force;
-          nodes[j].vx += (dx / distance) * force;
-          nodes[j].vy += (dy / distance) * force;
-          nodes[j].vz += (dz / distance) * force;
+          const nodeA = nodes[i];
+          const nodeB = nodes[j];
+          const dx = nodeB.x - nodeA.x;
+          const dy = nodeB.y - nodeA.y;
+          const dz = nodeB.z - nodeA.z;
+          const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          if (distance === 0) continue;
+          const repulsionStrength = 5;
+          let repulsion = repulsionStrength / (distance * distance);
+          if (nodeA.depth !== nodeB.depth) repulsion *= 0.5;
+          const forceX = dx / distance * repulsion;
+          const forceY = dy / distance * repulsion;
+          const forceZ = dz / distance * repulsion;
+          nodeA.vx -= forceX;
+          nodeA.vy -= forceY;
+          nodeA.vz -= forceZ;
+          nodeB.vx += forceX;
+          nodeB.vy += forceY;
+          nodeB.vz += forceZ;
         }
       }
 
-      // Attractive forces
       links.forEach(link => {
-        const source = nodes[link.source];
-        const target = nodes[link.target];
-        const dx = target.x - source.x;
-        const dy = target.y - source.y;
-        const dz = target.z - source.z;
-        const distance = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), 0.1);
-        const force = (distance - 2) * 0.05 * link.strength;
-
-        source.vx += (dx / distance) * force;
-        source.vy += (dy / distance) * force;
-        source.vz += (dz / distance) * force;
-        target.vx -= (dx / distance) * force;
-        target.vy -= (dy / distance) * force;
-        target.vz -= (dz / distance) * force;
+        const dx = link.target.x - link.source.x;
+        const dy = link.target.y - link.source.y;
+        const dz = link.target.z - link.source.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance === 0) return;
+        const idealDistance = 3 + Math.abs(link.target.depth - link.source.depth) * 2;
+        const springForce = (distance - idealDistance) * 0.05;
+        const forceX = dx / distance * springForce;
+        const forceY = dy / distance * springForce;
+        const forceZ = dz / distance * springForce;
+        link.source.vx += forceX;
+        link.source.vy += forceY;
+        link.source.vz += forceZ;
+        link.target.vx -= forceX;
+        link.target.vy -= forceY;
+        link.target.vz -= forceZ;
       });
 
-      // Update positions
+      let centerX = 0, centerY = 0, centerZ = 0;
       nodes.forEach(node => {
-        node.vx *= 0.95;
-        node.vy *= 0.95;
-        node.vz *= 0.95;
+        centerX += node.x;
+        centerY += node.y;
+        centerZ += node.z;
+      });
+      centerX /= nodes.length;
+      centerY /= nodes.length;
+      centerZ /= nodes.length;
+
+      nodes.forEach(node => {
+        node.vx -= centerX * 0.01;
+        node.vy -= centerY * 0.01;
+        node.vz -= centerZ * 0.01;
+      });
+
+      let totalMovement = 0;
+      nodes.forEach(node => {
         node.x += node.vx;
         node.y += node.vy;
         node.z += node.vz;
+        node.vx *= 0.9;
+        node.vy *= 0.9;
+        node.vz *= 0.9;
         node.mesh.position.set(node.x, node.y, node.z);
+        totalMovement += Math.abs(node.vx) + Math.abs(node.vy) + Math.abs(node.vz);
       });
 
-      // Update lines
-      rootGroup.children.forEach(child => {
-        if (child instanceof THREE.Line) {
-          const source = nodes[child.userData.sourceIndex];
-          const target = nodes[child.userData.targetIndex];
-          const positions = child.geometry.attributes.position;
-          positions.setXYZ(0, source.x, source.y, source.z);
-          positions.setXYZ(1, target.x, target.y, target.z);
-          positions.needsUpdate = true;
+      links.forEach(link => {
+        const points = [
+          new THREE.Vector3(link.source.x, link.source.y, link.source.z),
+          new THREE.Vector3(link.target.x, link.target.y, link.target.z)
+        ];
+        link.line.geometry.dispose();
+        link.line.geometry = new THREE.BufferGeometry().setFromPoints(points);
+      });
+
+      if (isLoading && totalMovement < 0.05) {
+        setIsLoading(false);
+      }
+
+      return totalMovement;
+    };
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const handleNodeClick = (event: MouseEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(scene.children.filter(obj => obj.type === 'Mesh'));
+      if (intersects.length > 0) {
+        const clickedNode = nodesMap.get(intersects[0].object.uuid);
+        if (clickedNode) {
+          if (selectedNode === clickedNode.mesh.uuid) {
+            setSelectedNode(null);
+            resetAllNodesVisibility();
+          } else {
+            setSelectedNode(clickedNode.mesh.uuid);
+            highlightRelatedNodes(clickedNode);
+          }
         }
+      }
+    };
+
+    const highlightRelatedNodes = (nodeObj: any) => {
+      const relatedNodes = getRelatedNodes(nodeObj);
+      nodes.forEach(node => {
+        if (relatedNodes.has(node.mesh.uuid)) {
+          node.mesh.material.opacity = 1.0;
+          if (node.mesh.uuid === nodeObj.mesh.uuid) {
+            node.mesh.material.emissive = new THREE.Color(0x333333);
+            node.mesh.material.emissiveIntensity = 0.5;
+            node.mesh.scale.set(1.2, 1.2, 1.2);
+          } else {
+            node.mesh.material.emissive = new THREE.Color(0x111111);
+            node.mesh.material.emissiveIntensity = 0.2;
+            node.mesh.scale.set(1, 1, 1);
+          }
+        } else {
+          node.mesh.material.opacity = 0.15;
+          node.mesh.material.emissive = new THREE.Color(0x000000);
+          node.mesh.material.emissiveIntensity = 0;
+          node.mesh.scale.set(0.8, 0.8, 0.8);
+        }
+      });
+      links.forEach(link => {
+        const isRelatedLink = relatedNodes.has(link.source.mesh.uuid) && relatedNodes.has(link.target.mesh.uuid);
+        link.line.material.opacity = isRelatedLink ? 0.8 : 0.1;
+        link.line.material.color.set(isRelatedLink ? 0x777777 : 0x555555);
       });
     };
 
-    let frameCount = 0;
-    const maxIterations = 100;
+    const resetAllNodesVisibility = () => {
+      nodes.forEach(node => {
+        node.mesh.material.opacity = 0.85;
+        node.mesh.material.emissive = new THREE.Color(0x000000);
+        node.mesh.material.emissiveIntensity = 0;
+        node.mesh.scale.set(1, 1, 1);
+      });
+      links.forEach(link => {
+        link.line.material.opacity = 0.6;
+        link.line.material.color.set(0x555555);
+      });
+    };
+
+    renderer.domElement.addEventListener('click', handleNodeClick);
 
     const animate = () => {
       requestAnimationFrame(animate);
-      if (frameCount < maxIterations) {
-        simulateForces();
-        frameCount++;
-        if (frameCount === maxIterations) setIsLoading(false);
-      }
+      if (isLoading || autoRotate) applyForces();
       controls.update();
       renderer.render(scene, camera);
     };
-
     animate();
-    sceneRef.current = { scene, camera, controls, renderer };
 
     const handleResize = () => {
-      if (!mountRef.current) return;
-      const width = mountRef.current.clientWidth;
-      const height = mountRef.current.clientHeight;
+      if (!mountRef.current || !sceneRef.current) return;
+      const width = document.fullscreenElement ? window.innerWidth : mountRef.current.clientWidth;
+      const height = document.fullscreenElement ? window.innerHeight : mountRef.current.clientHeight;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
     };
 
+    sceneRef.current = { scene, camera, controls, renderer, resetAllNodesVisibility };
     window.addEventListener('resize', handleResize);
+    document.addEventListener('fullscreenchange', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (mountRef.current && renderer.domElement) {
+      document.removeEventListener('fullscreenchange', handleResize);
+      renderer.domElement.removeEventListener('click', handleNodeClick);
+      scene.traverse(obj => {
+        if (obj instanceof THREE.Object3D) {
+          if ((obj as any).geometry) (obj as any).geometry.dispose();
+          if ((obj as any).material) {
+            if (Array.isArray((obj as any).material)) {
+              (obj as any).material.forEach((m: any) => m.dispose());
+            } else {
+              (obj as any).material.dispose();
+            }
+          }
+        }
+      });
+      renderer.dispose();
+      if (mountRef.current && mountRef.current.contains(renderer.domElement)) {
         mountRef.current.removeChild(renderer.domElement);
       }
-      renderer.dispose();
-      scene.dispose();
     };
-  }, [fileTree]);
+  }, [fileTree, autoRotate]);
 
-  const handleReset = () => sceneRef.current?.controls.reset();
-  const handleZoomIn = () => {
-    if (sceneRef.current?.camera) {
-      sceneRef.current.camera.position.z -= 2;
+  useEffect(() => {
+    if (!selectedNode && sceneRef.current?.resetAllNodesVisibility) {
+      sceneRef.current.resetAllNodesVisibility();
+    }
+  }, [selectedNode]);
+
+  const toggleFullScreen = () => {
+    const elem = mountRef.current;
+    if (!elem) return;
+    if (!document.fullscreenElement) {
+      elem.requestFullscreen().catch(err => toast.error(`Error enabling fullscreen: ${err.message}`));
+    } else {
+      document.exitFullscreen();
     }
   };
-  const handleZoomOut = () => {
-    if (sceneRef.current?.camera) {
-      sceneRef.current.camera.position.z += 2;
+
+  const toggleAutoRotate = () => setAutoRotate(prev => !prev);
+
+  const handleReset = () => {
+    if (sceneRef.current?.controls) {
+      sceneRef.current.controls.reset();
     }
+    setSelectedNode(null);
   };
+
+  const handleZoomIn = useCallback(() => {
+    if (sceneRef.current?.camera) {
+      sceneRef.current.camera.position.z = Math.max(sceneRef.current.camera.position.z - 5, 10);
+      sceneRef.current.controls.update();
+    }
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (sceneRef.current?.camera) {
+      sceneRef.current.camera.position.z = Math.min(sceneRef.current.camera.position.z + 5, 100);
+      sceneRef.current.controls.update();
+    }
+  }, []);
 
   return (
-    <Card className="w-full overflow-hidden border border-border">
-      <CardHeader className="p-4 border-b border-border">
-        <CardTitle className="text-sm font-medium flex items-center">
-          <Layers className="h-4 w-4 mr-2 text-primary" />
-          3D File Structure Visualization
-          {isLoading && (
-            <span className="ml-2 text-xs font-normal text-muted-foreground animate-pulse">
-              Generating layout...
-            </span>
-          )}
+    <Card className="w-full overflow-hidden border border-border shadow-lg relative">
+      <CardHeader className="p-4 border-b border-border flex justify-between items-center">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Layers className="h-4 w-4 text-primary" />
+          Interactive File Structure
+          {isLoading && <span className="text-xs text-muted-foreground animate-pulse">Organizing ({nodeCount} nodes)</span>}
+          {selectedNode && <span className="text-xs text-primary ml-2">(Node selected)</span>}
         </CardTitle>
+        <div className="flex items-center gap-2">
+          {selectedNode && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs flex items-center gap-1 h-7"
+              onClick={() => setSelectedNode(null)}
+            >
+              <X className="h-3 w-3" /> Clear Selection
+            </Button>
+          )}
+          <Badge variant="outline" className="text-xs">{nodeCount} items</Badge>
+        </div>
       </CardHeader>
       <CardContent className="p-0 relative">
-        <div ref={mountRef} className="w-full h-[400px] bg-[#0f1117]" />
-        <div className="absolute bottom-4 right-4 flex gap-2">
-          <Button variant="secondary" size="sm" className="w-8 h-8 p-0 rounded-full" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4" />
+        <div ref={mountRef} className="w-full h-[600px] bg-[#111827]" />
+        <div className="absolute bottom-4 left-4 flex gap-2 bg-background/80 p-2 rounded-lg shadow-md">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-8 h-8 p-0 rounded-full"
+            onClick={toggleFullScreen}
+            title="Toggle fullscreen"
+          >
+            {document.fullscreenElement ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </Button>
-          <Button variant="secondary" size="sm" className="w-8 h-8 p-0 rounded-full" onClick={handleZoomIn}>
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button variant="secondary" size="sm" className="w-8 h-8 p-0 rounded-full" onClick={handleZoomOut}>
-            <ZoomOut className="h-4 w-4" />
-          </Button>
+          {!document.fullscreenElement && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-8 h-8 p-0 rounded-full"
+                onClick={toggleAutoRotate}
+                title="Toggle auto simulation"
+              >
+                <RefreshCw className={`h-4 w-4 ${autoRotate ? 'text-primary animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-8 h-8 p-0 rounded-full"
+                onClick={handleReset}
+                title="Reset view"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-8 h-8 p-0 rounded-full"
+                onClick={handleZoomIn}
+                title="Zoom in"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-8 h-8 p-0 rounded-full"
+                onClick={handleZoomOut}
+                title="Zoom out"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
+        {document.fullscreenElement && (
+          <div className="fixed top-4 right-4 z-50">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => document.exitFullscreen()}
+              className="flex items-center gap-2 bg-background/80 rounded-lg shadow-md"
+            >
+              <span>ESC</span>
+              <Minimize className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">
+                Simulating {nodeCount} nodes...
+              </span>
+            </div>
+          </div>
+        )}
       </CardContent>
-      <div className="p-3 border-t border-border text-xs text-muted-foreground">
-        Drag to rotate • Scroll to zoom • Double-click to focus
-      </div>
+      {selectedNode && (
+        <div className="absolute top-4 right-4 bg-background/90 p-2 rounded-lg shadow-md max-w-xs">
+          <p className="text-xs text-muted-foreground">
+            Selected: {nodesMap.get(selectedNode)?.mesh.userData.name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Type: {nodesMap.get(selectedNode)?.mesh.userData.isFolder ? 'Folder' : 'File'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Depth: {nodesMap.get(selectedNode)?.mesh.userData.depth}
+          </p>
+        </div>
+      )}
     </Card>
   );
 });
 
+FileTree3DVisualization.displayName = 'FileTree3DVisualization';
+
 const RepoPage = memo(() => {
-  const { id: repoId } = useParams();
+  const { id: repoId } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const [state, setState] = useState({
+  const [state, setState] = useState<{
+    projectId: string;
+    repo: RepoData | null;
+    isLoading: boolean;
+    errors: Record<string, string>;
+    hasFetched: boolean;
+    uploadedFiles: FileData[];
+    showUploadDialog: boolean;
+    selectedFile: string | null;
+    expandedFolders: Set<string>;
+  }>({
     projectId: '',
     repo: null,
     isLoading: true,
@@ -471,7 +748,7 @@ const RepoPage = memo(() => {
     expandedFolders: new Set(),
   });
 
-  const validateToken = useCallback(() => {
+  const validateToken = useCallback((): boolean => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/");
@@ -483,16 +760,20 @@ const RepoPage = memo(() => {
   const fetchRepoData = useCallback(async (force = false) => {
     if (!validateToken() || !repoId) return;
 
-    if (!force && repoCache.has(repoId)) {
-      const cachedRepo = repoCache.get(repoId);
+    const repoCacheKey = `${repoId}:repo`;
+    const filesCacheKey = `${repoId}:files`;
+    const cachedRepo = repoPageCache.get(repoCacheKey) as RepoData | undefined;
+    const cachedFiles = repoPageCache.get(filesCacheKey) as FileData[] | undefined;
+
+    if (!force && cachedRepo && cachedFiles) {
       setState(prev => ({
         ...prev,
-        repo: cachedRepo,
-        projectId: cachedRepo?.project_id || '',
+        repo: { ...cachedRepo, files: cachedFiles },
+        projectId: cachedRepo.project_id || '',
         isLoading: false,
         hasFetched: true,
-        expandedFolders: new Set([cachedRepo?.name || "Unnamed Repository"]),
-        showUploadDialog: cachedRepo?.source === "local" && !cachedRepo?.files?.length,
+        expandedFolders: new Set([cachedRepo.name || "Unnamed Repository"]),
+        showUploadDialog: cachedRepo.source === "local" && !cachedFiles.length,
       }));
       return;
     }
@@ -505,12 +786,14 @@ const RepoPage = memo(() => {
         apiMethods.listRepofiles(repoId).catch(() => ({ files: [] })),
       ]);
 
-      const updatedRepo = {
+      const updatedFiles = Array.isArray(filesData?.files) ? filesData.files : [];
+      const updatedRepo: RepoData = {
         ...repoData,
-        files: Array.isArray(filesData?.files) ? filesData.files : [],
+        files: updatedFiles,
       };
 
-      repoCache.set(repoId, updatedRepo);
+      repoPageCache.set(repoCacheKey, { ...updatedRepo, files: [] }); // Store repo without files
+      repoPageCache.set(filesCacheKey, updatedFiles);
 
       setState(prev => ({
         ...prev,
@@ -519,12 +802,12 @@ const RepoPage = memo(() => {
         isLoading: false,
         hasFetched: true,
         expandedFolders: new Set([updatedRepo.name || "Unnamed Repository"]),
-        showUploadDialog: updatedRepo.source === "local" && !updatedRepo.files.length,
+        showUploadDialog: updatedRepo.source === "local" && !updatedFiles.length,
       }));
     } catch (err) {
       setState(prev => ({
         ...prev,
-        errors: { ...prev.errors, fetch: err.message || "Error fetching repository" },
+        errors: { ...prev.errors, fetch: err instanceof Error ? err.message : "Error fetching repository" },
         isLoading: false,
         hasFetched: true,
       }));
@@ -532,15 +815,19 @@ const RepoPage = memo(() => {
     }
   }, [repoId, validateToken]);
 
-  const handleFolderUpload = useCallback((event) => {
+  const handleFolderUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
-    const fileList = files.map(file => ({
+    const fileList: FileData[] = files.map(file => ({
       path: file.webkitRelativePath || file.name,
       size: file.size,
       modified: file.lastModified ? new Date(file.lastModified).toISOString() : new Date().toISOString(),
     }));
+
+    const filesCacheKey = `${repoId}:files`;
+    repoPageCache.set(filesCacheKey, fileList);
+
     setState(prev => ({
       ...prev,
       uploadedFiles: fileList,
@@ -548,21 +835,18 @@ const RepoPage = memo(() => {
       showUploadDialog: false,
     }));
     toast.success("Folder uploaded successfully");
-  }, []);
+  }, [repoId]);
 
   useEffect(() => {
     if (!state.hasFetched && repoId) {
-      fetchRepoData(true);
+      fetchRepoData();
     }
-    return () => {
-      if (repoCache.size > 50) repoCache.clear();
-    };
   }, [fetchRepoData, state.hasFetched, repoId]);
 
-  const FileExplorer = memo(({ files }) => {
-    const fileTree = buildFileTree(state.repo?.name, files);
+  const FileExplorer = memo(({ files }: { files: FileData[] }) => {
+    const fileTree = buildFileTree(state.repo?.name || "Unnamed Repository", files);
 
-    const toggleFolder = useCallback((path) => {
+    const toggleFolder = useCallback((path: string) => {
       setState(prev => {
         const newExpanded = new Set(prev.expandedFolders);
         newExpanded.has(path) ? newExpanded.delete(path) : newExpanded.add(path);
@@ -570,11 +854,11 @@ const RepoPage = memo(() => {
       });
     }, []);
 
-    const getFileIcon = useCallback((filename) => {
-      return <File className="h-4 w-4 text-primary flex-shrink-0" />;
-    }, []);
+    const getFileIcon = useCallback(() => (
+      <File className="h-4 w-4 text-primary flex-shrink-0" />
+    ), []);
 
-    const renderTree = useCallback((node, path = state.repo?.name || "Unnamed Repository") => (
+    const renderTree = useCallback((node: FileTreeNode, path: string) => (
       <div className={node.name !== (state.repo?.name || "Unnamed Repository") ? "ml-4" : ""}>
         {node.isFolder ? (
           <div>
@@ -607,7 +891,7 @@ const RepoPage = memo(() => {
             onClick={() => setState(prev => ({ ...prev, selectedFile: path }))}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {getFileIcon(node.name)}
+              {getFileIcon()}
               <span className="truncate">{node.name}</span>
             </div>
             <div className="text-xs text-muted-foreground flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -632,7 +916,7 @@ const RepoPage = memo(() => {
           </div>
           <ScrollArea className="h-[calc(100vh-4rem)]">
             <div className="p-2">
-              {files?.length ? renderTree(fileTree) : (
+              {files?.length ? renderTree(fileTree, state.repo?.name || "Unnamed Repository") : (
                 <div className="flex flex-col items-center justify-center p-6 text-center">
                   <FileSymlink className="h-10 w-10 text-muted-foreground mb-2 opacity-50" />
                   <p className="text-sm text-muted-foreground italic">No files available</p>
@@ -676,7 +960,7 @@ const RepoPage = memo(() => {
     </Dialog>
   ));
 
-  const RepoStats = memo(({ repo }) => {
+  const RepoStats = memo(({ repo }: { repo: RepoData }) => {
     if (!repo?.files?.length) return null;
 
     const fileExtensions = groupFilesByExtension(repo.files);
@@ -730,7 +1014,7 @@ const RepoPage = memo(() => {
 
   return (
     <Suspense fallback={<LoadingAnimation />}>
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-background overflow-hidden mt-4">
         <Button
           variant="ghost"
           size="sm"
@@ -743,7 +1027,7 @@ const RepoPage = memo(() => {
         {state.isLoading && !state.hasFetched ? (
           <>
             <SidebarSkeleton />
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 h-full">
               <HeaderSkeleton />
               <MainSkeleton />
               <FooterSkeleton />
@@ -751,10 +1035,10 @@ const RepoPage = memo(() => {
           </>
         ) : (
           <>
-            <FileExplorer files={state.repo?.files} />
-            <div className="flex-1 flex flex-col min-w-0">
+            <FileExplorer files={state.repo?.files || []} />
+            <div className="flex-1 flex flex-col min-w-0 h-full">
               {state.errors.fetch ? (
-                <div className="flex-1 flex items-center justify-center p-4">
+                <div className="flex-1 flex items-center justify-center p-6">
                   <Alert variant="destructive" className="max-w-md w-full">
                     <AlertDescription className="flex items-center justify-between gap-4">
                       <span>{state.errors.fetch}</span>
@@ -772,8 +1056,8 @@ const RepoPage = memo(() => {
                 </div>
               ) : state.repo ? (
                 <>
-                  <header className="border-b border-border p-4 flex items-center justify-between bg-background shrink-0 sticky top-0 z-10 shadow-sm">
-                    <div className="flex items-center gap-3">
+                  <header className="border-b border-border px-6 py-4 flex items-center justify-between bg-background shrink-0 sticky top-0 z-10 shadow-sm">
+                    <div className="flex items-center gap-4">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -783,17 +1067,17 @@ const RepoPage = memo(() => {
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </Button>
-                      <h1 className="text-lg font-medium text-foreground truncate flex items-center">
+                      <h1 className="text-lg font-medium text-foreground truncate flex items-center gap-2">
                         {state.repo.name || 'Unnamed Repository'}
                         {state.repo.source === "github" && (
-                          <Badge variant="outline" className="ml-2 text-xs">GitHub</Badge>
+                          <Badge variant="outline" className="text-xs">GitHub</Badge>
                         )}
                         {state.repo.source === "local" && (
-                          <Badge variant="outline" className="ml-2 text-xs">Local</Badge>
+                          <Badge variant="outline" className="text-xs">Local</Badge>
                         )}
                       </h1>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {state.repo.repo_url && (
                         <Button
                           variant="ghost"
@@ -816,71 +1100,58 @@ const RepoPage = memo(() => {
                       </Button>
                     </div>
                   </header>
+                  <main className="flex-1 overflow-y-auto px-6 py-8">
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                      <section className="space-y-6">
+                        <div className="space-y-4">
+                          <h2 className="text-lg font-semibold text-foreground flex items-center">
+                            <Info className="h-5 w-5 mr-2 text-primary" />
+                            Repository Details
+                          </h2>
+                          <RepoStats repo={state.repo} />
+                          <Card className="overflow-hidden border border-border">
+                            <CardContent className="p-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="font-medium text-foreground w-20 flex-shrink-0">Created:</span>
+                                    <span className="text-muted-foreground flex items-center gap-2">
+                                      {formatDate(state.repo.created_at) || "N/A"}
+                                      <Calendar className="h-4 w-4 text-primary" />
+                                    </span>
+                                  </div>
+                                  
+                                </div>
+                                <div className="space-y-4">
+                                  
+                                  <div className="flex items-start gap-3">
+                                    <span className="font-medium text-foreground w-20 flex-shrink-0">Updated:</span>
+                                    <span className="text-muted-foreground flex items-center gap-2">
+                                      {formatDate(state.repo.updatedAt) || "N/A"}
+                                      <Calendar className="h-4 w-4 text-primary" />
+                                    </span>
+                                  </div>
+                                </div>                                                                                                                                                                                                                          
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                        {/* <FileTree3DVisualization fileTree={buildFileTree(state.repo.name, state.repo.files)} /> */}
 
-                  <main className="flex-1 overflow-y-auto p-6">
-                    <div className="space-y-6 max-w-4xl mx-auto">
-                      <section>
-                        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                          <Info className="h-5 w-5 mr-2 text-primary" />
-                          Repository Details
-                        </h2>
-                        <RepoStats repo={state.repo} />
-                        <Card className="overflow-hidden border border-border">
-                          <CardContent className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
-                              <div className="space-y-3">
-                                <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Source:</span>
-                                  <span className="text-muted-foreground capitalize">{state.repo.source || "N/A"}</span>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">URL:</span>
-                                  <span className="text-muted-foreground break-all flex items-center gap-2">
-                                    {state.repo.repo_url ? (
-                                      <a href={state.repo.repo_url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate flex items-center gap-2">
-                                        <ExternalLink className="h-4 w-4 flex-shrink-0 text-primary" />
-                                        {state.repo.repo_url}
-                                      </a>
-                                    ) : "N/A"}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="space-y-3">
-                                <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Created:</span>
-                                  <span className="text-muted-foreground flex items-center gap-2">
-                                    {formatDate(state.repo.created_at) || "N/A"}
-                                    <Calendar className="h-4 w-4 text-primary" />
-                                  </span>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                  <span className="font-medium text-foreground w-20 flex-shrink-0">Updated:</span>
-                                  <span className="text-muted-foreground flex items-center gap-2">
-                                    {formatDate(state.repo.updatedAt) || "N/A"}
-                                    <Calendar className="h-4 w-4 text-primary" />
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
                       </section>
 
                       {state.selectedFile && (
                         <section className="bg-[#1a1c23] p-4 rounded-md border border-border">
-                          <h3 className="text-sm font-semibold mb-2 flex items-center">
+                          <h3 className="text-sm font-semibold flex items-center">
                             <File className="h-4 w-4 mr-2 text-primary" />
                             Selected File: {state.selectedFile}
                           </h3>
                         </section>
                       )}
-
-                      <FileTree3DVisualization fileTree={buildFileTree(state.repo.name, state.repo.files)} />
                     </div>
                   </main>
-
-                  <footer className="shrink-0 h-8 border-t border-border bg-[#1a1c23] flex items-center px-4 justify-between text-xs text-muted-foreground shadow-inner">
-                    <div className="flex items-center gap-1">
+                  <footer className="shrink-0 h-10 border-t border-border bg-[#1a1c23] flex items-center px-6 justify-between text-xs text-muted-foreground shadow-inner -mb-2">
+                    <div className="flex items-center gap-2">
                       <FileCheck className="h-3.5 w-3.5" />
                       <span>{state.repo.files?.length || 0} files</span>
                     </div>
@@ -889,9 +1160,9 @@ const RepoPage = memo(() => {
                 </>
               ) : null}
             </div>
+            <UploadDialog />
           </>
         )}
-        <UploadDialog />
       </div>
     </Suspense>
   );

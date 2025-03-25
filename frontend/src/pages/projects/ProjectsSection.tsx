@@ -38,19 +38,34 @@ const SelectValue = React.lazy(() => import("@/components/ui/select").then(mod =
 const SelectContent = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectContent })));
 const SelectItem = React.lazy(() => import("@/components/ui/select").then(mod => ({ default: mod.SelectItem })));
 
-// Cache implementation with expiration
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const isCacheExpired = (timestamp: number) => Date.now() - timestamp > CACHE_DURATION;
+// Types for project data
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  created_at: number;
+  updated_at?: number;
+  size?: number;
+  repo_count?: number;
+  collaborator_count?: number;
+  owner_id?: string;
+}
 
-// Projects API hook
+// Unified cache for projects
+const projectsCache = new Map<string, Project[]>();
+
+// Projects API hook with caching
 const useProjectsApi = () => {
   const projects = useRecoilValue(projectsAtom);
   const setProjects = useSetRecoilState(projectsAtom);
   const setProject = useSetRecoilState(projectAtom);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [state, setState] = useState({ isLoading: false, errors: {} as Record<string, string>, hasFetched: false });
+  const [state, setState] = useState({
+    isLoading: false,
+    errors: {} as Record<string, string>,
+    hasFetched: false,
+  });
 
   const validateToken = useCallback(() => {
     const token = localStorage.getItem("token");
@@ -64,17 +79,18 @@ const useProjectsApi = () => {
   const fetchProjects = useCallback(async (force = false) => {
     if (!validateToken()) return;
     const cacheKey = "projects";
-    const cached = cache.get(cacheKey);
-    if (!force && cached && !isCacheExpired(cached.timestamp)) {
-      setProjects(cached.data);
-      setState(prev => ({ ...prev, hasFetched: true }));
+
+    if (!force && projectsCache.has(cacheKey)) {
+      const cachedProjects = projectsCache.get(cacheKey)!;
+      setProjects(cachedProjects);
+      setState(prev => ({ ...prev, hasFetched: true, isLoading: false }));
       return;
     }
 
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const newData = await apiMethods.listProjects();
-      cache.set(cacheKey, { data: newData, timestamp: Date.now() });
+      projectsCache.set(cacheKey, newData);
       if (!deepEqual(projects, newData)) {
         setProjects(newData);
       }
@@ -82,7 +98,7 @@ const useProjectsApi = () => {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { fetch: error.message || "Failed to fetch projects" },
+        errors: { fetch: error instanceof Error ? error.message : "Failed to fetch projects" },
         isLoading: false,
         hasFetched: true,
       }));
@@ -104,7 +120,9 @@ const useProjectsApi = () => {
 
       const projectData = { name, description, owner_id: user?.id };
       const newProject = await apiMethods.createProject(projectData);
-      setProjects(prev => [...prev, newProject]);
+      const updatedProjects = [...projects, newProject];
+      projectsCache.set("projects", updatedProjects);
+      setProjects(updatedProjects);
       setProject(newProject);
       navigate(`/project/${newProject.id}`);
       setState(prev => ({ ...prev, isLoading: false }));
@@ -112,48 +130,52 @@ const useProjectsApi = () => {
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { create: error.message || "Failed to create project" },
+        errors: { create: error instanceof Error ? error.message : "Failed to create project" },
         isLoading: false,
       }));
       return false;
     }
-  }, [validateToken, user, setProjects, setProject, navigate, projects]);
+  }, [validateToken, user, projects, setProjects, setProject, navigate]);
 
   const renameProject = useCallback(async (projectId: string, newName: string) => {
     if (!validateToken() || !newName.trim()) return false;
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       const updatedProject = await apiMethods.updateProject(projectId, { name: newName });
-      setProjects(prev => prev.map(p => p.id === projectId ? updatedProject : p));
+      const updatedProjects = projects.map(p => p.id === projectId ? updatedProject : p);
+      projectsCache.set("projects", updatedProjects);
+      setProjects(updatedProjects);
       setState(prev => ({ ...prev, isLoading: false }));
       return true;
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { rename: error.message || "Failed to rename project" },
+        errors: { rename: error instanceof Error ? error.message : "Failed to rename project" },
         isLoading: false,
       }));
       return false;
     }
-  }, [validateToken, setProjects]);
+  }, [validateToken, projects, setProjects]);
 
   const deleteProject = useCallback(async (projectId: string) => {
     if (!validateToken()) return false;
     setState(prev => ({ ...prev, isLoading: true }));
     try {
       await apiMethods.deleteProject(projectId);
-      setProjects(prev => prev.filter(p => p.id !== projectId));
+      const updatedProjects = projects.filter(p => p.id !== projectId);
+      projectsCache.set("projects", updatedProjects);
+      setProjects(updatedProjects);
       setState(prev => ({ ...prev, isLoading: false }));
       return true;
     } catch (error) {
       setState(prev => ({
         ...prev,
-        errors: { delete: error.message || "Failed to delete project" },
+        errors: { delete: error instanceof Error ? error.message : "Failed to delete project" },
         isLoading: false,
       }));
       return false;
     }
-  }, [validateToken, setProjects]);
+  }, [validateToken, projects, setProjects]);
 
   const clearError = useCallback((key: string) => {
     setState(prev => {
@@ -166,8 +188,13 @@ const useProjectsApi = () => {
   return { projects, ...state, fetchProjects, createProject, renameProject, deleteProject, clearError, setProject };
 };
 
-// Project Card Component
-const ProjectCard = memo(({ project, onSelect, onRename, onDelete }: any) => {
+// Project Card Component (unchanged)
+const ProjectCard = memo(({ project, onSelect, onRename, onDelete }: {
+  project: Project;
+  onSelect: (project: Project) => void;
+  onRename: (project: Project) => void;
+  onDelete: (project: Project) => void;
+}) => {
   const sizeInMB = project.size ? (project.size / (1024 * 1024)).toFixed(1) : "0.0";
   return (
     <Card
@@ -240,7 +267,7 @@ const ProjectCard = memo(({ project, onSelect, onRename, onDelete }: any) => {
   );
 });
 
-// Project Skeleton
+// Project Skeleton (unchanged)
 const ProjectsGridSkeleton = memo(() => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {Array(3).fill(0).map((_, i) => (
@@ -271,7 +298,7 @@ const ProjectsSection = memo(() => {
     createDialogOpen: false,
     renameDialogOpen: false,
     deleteDialogOpen: false,
-    selectedProject: null as any,
+    selectedProject: null as Project | null,
     searchTerm: "",
     filters: {
       status: "all" as "all" | "active" | "inactive",
@@ -349,7 +376,7 @@ const ProjectsSection = memo(() => {
   }, [projects, debouncedSearchTerm, state.filters, state.sort]);
 
   useEffect(() => {
-    if (!hasFetched) fetchProjects(true);
+    if (!hasFetched) fetchProjects();
   }, [fetchProjects, hasFetched]);
 
   const handleCreateProject = useCallback(async () => {
@@ -386,12 +413,12 @@ const ProjectsSection = memo(() => {
     delete: useDebounce(handleDeleteProject, 500)[0],
   };
 
-  const handleSelectProject = useCallback((project: any) => {
+  const handleSelectProject = useCallback((project: Project) => {
     setProject(project);
     navigate(`/project/${project.id}`);
   }, [setProject, navigate]);
 
-  const openRenameDialog = useCallback((project: any) => {
+  const openRenameDialog = useCallback((project: Project) => {
     setState(prev => ({
       ...prev,
       selectedProject: { ...project },
@@ -399,7 +426,7 @@ const ProjectsSection = memo(() => {
     }));
   }, []);
 
-  const openDeleteDialog = useCallback((project: any) => {
+  const openDeleteDialog = useCallback((project: Project) => {
     setState(prev => ({
       ...prev,
       selectedProject: project,
@@ -449,22 +476,7 @@ const ProjectsSection = memo(() => {
             </div>
 
             <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-              <Select
-                value={state.filters.status}
-                onValueChange={value => setState(prev => ({
-                  ...prev,
-                  filters: { ...prev.filters, status: value as any },
-                }))}
-              >
-                <SelectTrigger className="w-[180px] border-gray-700 bg-transparent text-gray-200">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#191d23] border-gray-700 text-gray-200">
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+
 
               <Select
                 value={state.filters.minRepos.toString()}
@@ -506,7 +518,7 @@ const ProjectsSection = memo(() => {
                 value={state.filters.dateRange}
                 onValueChange={value => setState(prev => ({
                   ...prev,
-                  filters: { ...prev.filters, dateRange: value as any },
+                  filters: { ...prev.filters, dateRange: value as "all" | "week" | "month" | "year" },
                 }))}
               >
                 <SelectTrigger className="w-[180px] border-gray-700 bg-transparent text-gray-200">
@@ -524,7 +536,7 @@ const ProjectsSection = memo(() => {
                 value={state.sort}
                 onValueChange={value => setState(prev => ({
                   ...prev,
-                  sort: value as any,
+                  sort: value as "last_updated" | "created" | "name" | "size",
                 }))}
               >
                 <SelectTrigger className="w-[180px] border-gray-700 bg-transparent text-gray-200">
@@ -677,7 +689,7 @@ const ProjectsSection = memo(() => {
                 value={state.selectedProject?.name || ""}
                 onChange={e => setState(prev => ({
                   ...prev,
-                  selectedProject: { ...prev.selectedProject, name: e.target.value },
+                  selectedProject: prev.selectedProject ? { ...prev.selectedProject, name: e.target.value } : null,
                 }))}
                 className="mb-4 bg-[#2a2a2a] border-gray-700 text-gray-200 focus:ring-2 focus:ring-[#00ff9d]/50"
               />
